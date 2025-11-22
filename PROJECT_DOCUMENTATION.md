@@ -8,7 +8,7 @@ A comprehensive blockchain explorer platform with P2P trading capabilities, wall
 
 ## 🛠️ Technology Stack
 
-### Frontend (`DB/`)
+### Frontend (`Frontend/`)
 - **Framework**: Next.js 16.0.3 (React 19.2.0)
 - **Language**: TypeScript 5.x
 - **Styling**: Tailwind CSS 4.1.9
@@ -575,10 +575,10 @@ Blockscan-Backend-main/
 └── package.json
 ```
 
-### Frontend Structure (`DB/`)
+### Frontend Structure (`Frontend/`)
 
 ```
-DB/
+Frontend/
 ├── app/
 │   ├── (dashboard)/
 │   │   ├── dashboard/
@@ -778,7 +778,7 @@ npm start
 
 ### Frontend Setup
 ```bash
-cd DB
+cd Frontend
 npm install
 # Configure .env.local file
 npm run dev

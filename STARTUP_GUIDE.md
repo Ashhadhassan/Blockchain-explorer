@@ -67,7 +67,7 @@ Loaded ENV: { host: 'localhost', port: '5432', user: 'postgres', database: 'test
 
 ### Step 1: Navigate to Frontend Directory
 ```powershell
-cd "C:\Users\Ashhad Hassan\Videos\DB_PROJECT\DB"
+cd "C:\Users\Ashhad Hassan\Videos\DB_PROJECT\Frontend"
 ```
 
 ### Step 2: Install Dependencies (First Time Only)
@@ -110,7 +110,7 @@ npm start
 
 **Window 2 - Frontend:**
 ```powershell
-cd "C:\Users\Ashhad Hassan\Videos\DB_PROJECT\DB"
+cd "C:\Users\Ashhad Hassan\Videos\DB_PROJECT\Frontend"
 npm run dev
 ```
 
@@ -125,7 +125,7 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\Users\Ashh
 Start-Sleep -Seconds 3
 
 # Start Frontend
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\Users\Ashhad Hassan\Videos\DB_PROJECT\DB'; Write-Host '🎨 Frontend Starting...' -ForegroundColor Cyan; npm run dev"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\Users\Ashhad Hassan\Videos\DB_PROJECT\Frontend'; Write-Host '🎨 Frontend Starting...' -ForegroundColor Cyan; npm run dev"
 
 Write-Host "`n✅ Both servers are starting in separate windows!" -ForegroundColor Green
 Write-Host "Backend: http://localhost:5000" -ForegroundColor Cyan

@@ -39,7 +39,7 @@ DB_PROJECT/
 │   │   ├── routes/            # API routes
 │   │   └── config/            # Database config
 │   └── database-schema.sql    # Database schema
-├── DB/                        # Frontend application
+├── Frontend/                  # Frontend application
 │   ├── app/                   # Next.js pages
 │   ├── components/            # React components
 │   ├── lib/                   # Utilities & API
@@ -71,7 +71,7 @@ DB_PROJECT/
 
 3. **Setup Frontend**
    ```bash
-   cd ../DB
+   cd ../Frontend
    npm install
    # Configure .env.local file (see below)
    ```
@@ -116,7 +116,7 @@ npm start
 
 Frontend:
 ```bash
-cd DB
+cd Frontend
 npm run dev
 ```
 
@@ -229,4 +229,5 @@ ISC License
 ---
 
 **Repository**: https://github.com/Ashhadhassan/Blockchain-explorer
+
 

@@ -21,7 +21,7 @@ Wait for: `🚀 Server running on port 5000`
 
 ### 2️⃣ Start Frontend (Window 2)
 ```powershell
-cd "C:\Users\Ashhad Hassan\Videos\DB_PROJECT\DB"
+cd "C:\Users\Ashhad Hassan\Videos\DB_PROJECT\Frontend"
 npm run dev
 ```
 

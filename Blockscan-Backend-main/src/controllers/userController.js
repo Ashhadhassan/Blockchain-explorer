@@ -2,10 +2,15 @@
 const { pool } = require("../config/connectDB");
 const asyncHandler = require("../utils/asyncHandler");
 const crypto = require("crypto");
-const { sendVerificationEmail, sendResendVerificationEmail } = require("../utils/emailService");
+const { sendVerificationEmail, sendResendVerificationEmail, sendDeleteAccountCode } = require("../utils/emailService");
 
 // Generate verification token
 const generateToken = () => crypto.randomBytes(32).toString("hex");
+
+// Generate 6-digit verification code
+const generateVerificationCode = () => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
 
 // GET /api/users - Get all users (for P2P page)
 const getAllUsers = asyncHandler(async (req, res) => {
@@ -422,6 +427,122 @@ const resendVerification = asyncHandler(async (req, res) => {
   });
 });
 
+// POST /api/users/request-delete-account
+const requestDeleteAccount = asyncHandler(async (req, res) => {
+  const { userId } = req.body;
+
+  if (!userId) {
+    return res.status(400).json({ message: "User ID is required" });
+  }
+
+  // Get user information
+  const user = await pool.query(
+    `SELECT user_id, email, full_name, username FROM users WHERE user_id = $1`,
+    [userId]
+  );
+
+  if (!user.rows.length) {
+    return res.status(404).json({ message: "User not found" });
+  }
+
+  const userData = user.rows[0];
+
+  // Generate 6-digit verification code
+  const verificationCode = generateVerificationCode();
+  const expiresAt = new Date();
+  expiresAt.setMinutes(expiresAt.getMinutes() + 15); // 15 minutes expiration
+
+  // Store verification code in email_verifications table
+  await pool.query(
+    `INSERT INTO email_verifications (user_id, email, token, type, expires_at)
+     VALUES ($1, $2, $3, 'account_deletion', $4)
+     ON CONFLICT (token) DO UPDATE SET expires_at = $4, created_at = NOW()`,
+    [userData.user_id, userData.email, verificationCode, expiresAt]
+  );
+
+  // Send verification code via email
+  try {
+    const userName = userData.full_name || userData.username || "User";
+    await sendDeleteAccountCode(userData.email, verificationCode, userName);
+  } catch (emailError) {
+    console.error("Failed to send delete account verification email:", emailError);
+    // In development, still return the code
+    if (process.env.NODE_ENV !== "production") {
+      console.log("Development mode: Delete Account Verification Code:", verificationCode);
+    }
+  }
+
+  res.status(200).json({
+    message: "Verification code sent to your email. Please check your inbox.",
+    // Only return code in development for testing
+    ...(process.env.NODE_ENV !== "production" && { verificationCode }),
+  });
+});
+
+// POST /api/users/confirm-delete-account
+const confirmDeleteAccount = asyncHandler(async (req, res) => {
+  const { userId, code } = req.body;
+
+  if (!userId || !code) {
+    return res.status(400).json({ message: "User ID and verification code are required" });
+  }
+
+  // Verify the code
+  const verification = await pool.query(
+    `SELECT verification_id, user_id, email, expires_at, verified
+     FROM email_verifications 
+     WHERE user_id = $1 AND token = $2 AND type = 'account_deletion'
+     ORDER BY created_at DESC
+     LIMIT 1`,
+    [userId, code]
+  );
+
+  if (!verification.rows.length) {
+    return res.status(400).json({ message: "Invalid verification code" });
+  }
+
+  const ver = verification.rows[0];
+
+  // Check if code is expired
+  if (new Date(ver.expires_at) < new Date()) {
+    return res.status(400).json({ message: "Verification code has expired. Please request a new one." });
+  }
+
+  // Check if already used
+  if (ver.verified) {
+    return res.status(400).json({ message: "This verification code has already been used" });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Mark verification as used
+    await client.query(
+      `UPDATE email_verifications SET verified = true WHERE verification_id = $1`,
+      [ver.verification_id]
+    );
+
+    // Delete user account (CASCADE will delete related wallets, token_holdings, etc.)
+    await client.query(
+      `DELETE FROM users WHERE user_id = $1`,
+      [userId]
+    );
+
+    await client.query("COMMIT");
+
+    res.status(200).json({
+      message: "Account deleted successfully. All your data has been permanently removed.",
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    console.error("Error deleting account:", error);
+    throw error;
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = {
   getAllUsers,
   registerUser,
@@ -430,4 +551,6 @@ module.exports = {
   updateUserProfile,
   verifyEmail,
   resendVerification,
+  requestDeleteAccount,
+  confirmDeleteAccount,
 };

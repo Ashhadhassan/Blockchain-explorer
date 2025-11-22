@@ -11,7 +11,7 @@ import { Switch } from "@/components/ui/switch"
 import { useAppStore } from "@/store/app-store"
 import { usersApi, emailApi } from "@/lib/api"
 import { Badge } from "@/components/ui/badge"
-import { User, Mail, Shield, Bell, Key } from "lucide-react"
+import { User, Mail, Shield, Bell, Key, Trash2, AlertTriangle, Loader2 } from "lucide-react"
 
 export default function SettingsPage() {
   const { currentUser } = useAppStore()
@@ -19,6 +19,10 @@ export default function SettingsPage() {
   const [notifications, setNotifications] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteCode, setDeleteCode] = useState("")
+  const [isRequestingDelete, setIsRequestingDelete] = useState(false)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   // Form states
   const [profileForm, setProfileForm] = useState({
@@ -101,6 +105,52 @@ export default function SettingsPage() {
       toast.success("Verification email sent")
     } catch (error: any) {
       toast.error(error.data?.message || "Failed to send verification email")
+    }
+  }
+
+  const handleRequestDeleteAccount = async () => {
+    if (!currentUser) return
+    
+    setIsRequestingDelete(true)
+    try {
+      const result = await usersApi.requestDeleteAccount(currentUser.id)
+      toast.success(result.message || "Verification code sent to your email")
+      setShowDeleteConfirm(true)
+      // In development, show the code
+      if (result.verificationCode) {
+        toast.info(`Development mode: Code is ${result.verificationCode}`)
+      }
+    } catch (error: any) {
+      toast.error(error.data?.message || "Failed to send verification code")
+    } finally {
+      setIsRequestingDelete(false)
+    }
+  }
+
+  const handleConfirmDeleteAccount = async () => {
+    if (!currentUser || !deleteCode) {
+      toast.error("Please enter the verification code")
+      return
+    }
+
+    if (deleteCode.length !== 6) {
+      toast.error("Verification code must be 6 digits")
+      return
+    }
+
+    setIsDeleting(true)
+    try {
+      await usersApi.confirmDeleteAccount(currentUser.id, deleteCode)
+      toast.success("Account deleted successfully")
+      // Logout and redirect
+      setTimeout(() => {
+        useAppStore.getState().logout()
+        window.location.href = "/login"
+      }, 2000)
+    } catch (error: any) {
+      toast.error(error.data?.message || "Failed to delete account. Invalid code or code expired.")
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -241,6 +291,105 @@ export default function SettingsPage() {
                   <Button variant="outline" size="sm" disabled>
                     Coming Soon
                   </Button>
+                </div>
+              </div>
+
+              {/* Delete Account Section */}
+              <div className="mt-8 pt-8 border-t border-destructive/20">
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-lg font-semibold text-destructive flex items-center gap-2">
+                      <AlertTriangle className="h-5 w-5" />
+                      Danger Zone
+                    </h3>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Once you delete your account, there is no going back. Please be certain.
+                    </p>
+                  </div>
+
+                  {!showDeleteConfirm ? (
+                    <Button
+                      variant="destructive"
+                      onClick={handleRequestDeleteAccount}
+                      disabled={isRequestingDelete}
+                      className="w-full sm:w-auto"
+                    >
+                      {isRequestingDelete ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Sending Code...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete My Account
+                        </>
+                      )}
+                    </Button>
+                  ) : (
+                    <div className="space-y-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
+                      <div className="space-y-2">
+                        <Label htmlFor="deleteCode" className="text-destructive">
+                          Enter Verification Code
+                        </Label>
+                        <p className="text-xs text-muted-foreground">
+                          We've sent a 6-digit verification code to <strong>{currentUser.email}</strong>. 
+                          Please check your email and enter the code below.
+                        </p>
+                        <Input
+                          id="deleteCode"
+                          type="text"
+                          placeholder="000000"
+                          value={deleteCode}
+                          onChange={(e) => setDeleteCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                          maxLength={6}
+                          className="text-center text-2xl tracking-widest font-mono"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Code expires in 15 minutes
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="destructive"
+                          onClick={handleConfirmDeleteAccount}
+                          disabled={isDeleting || deleteCode.length !== 6}
+                          className="flex-1"
+                        >
+                          {isDeleting ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Deleting...
+                            </>
+                          ) : (
+                            <>
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Confirm Deletion
+                            </>
+                          )}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          onClick={() => {
+                            setShowDeleteConfirm(false)
+                            setDeleteCode("")
+                          }}
+                          disabled={isDeleting}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                      <div className="p-3 bg-destructive/20 border border-destructive/30 rounded text-sm text-destructive">
+                        <p className="font-semibold mb-1">⚠️ Warning: This action is irreversible!</p>
+                        <ul className="list-disc list-inside space-y-1 text-xs">
+                          <li>All your data will be permanently deleted</li>
+                          <li>All wallets and token holdings will be removed</li>
+                          <li>All transaction history will be lost</li>
+                          <li>You cannot recover your account after deletion</li>
+                        </ul>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

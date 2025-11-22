@@ -212,6 +212,15 @@ export const usersApi = {
   resendVerification: async (email: string): Promise<void> => {
     await api.post("/api/users/resend-verification", { email });
   },
+  requestDeleteAccount: async (userId: string): Promise<any> => {
+    const numericId = userId.includes("user-") ? userId.replace("user-", "") : userId;
+    const response = await api.post<{ message: string; verificationCode?: string }>("/api/users/request-delete-account", { userId: parseInt(numericId) });
+    return response;
+  },
+  confirmDeleteAccount: async (userId: string, code: string): Promise<void> => {
+    const numericId = userId.includes("user-") ? userId.replace("user-", "") : userId;
+    await api.post("/api/users/confirm-delete-account", { userId: parseInt(numericId), code });
+  },
 };
 
 // P2P

@@ -2,6 +2,7 @@
 const { pool } = require("../config/connectDB");
 const asyncHandler = require("../utils/asyncHandler");
 const crypto = require("crypto");
+const { sendVerificationEmail, sendResendVerificationEmail } = require("../utils/emailService");
 
 // Generate verification token
 const generateToken = () => crypto.randomBytes(32).toString("hex");
@@ -82,10 +83,23 @@ const registerUser = asyncHandler(async (req, res) => {
 
     await client.query("COMMIT");
 
+    // Send verification email
+    try {
+      await sendVerificationEmail(email, verificationToken, fullName);
+    } catch (emailError) {
+      // Log error but don't fail registration - email can be resent
+      console.error("Failed to send verification email:", emailError);
+      // In development, still return the token
+      if (process.env.NODE_ENV !== "production") {
+        console.log("Development mode: Verification token:", verificationToken);
+      }
+    }
+
     res.status(201).json({
-      message: "User registered successfully. Please verify your email.",
+      message: "User registered successfully. Please check your email to verify your account.",
       user: newUser,
-      verificationToken, // In production, send via email
+      // Only return token in development for testing
+      ...(process.env.NODE_ENV !== "production" && { verificationToken }),
       verificationUrl: `/verify-email?token=${verificationToken}`,
     });
   } catch (error) {
@@ -387,9 +401,21 @@ const resendVerification = asyncHandler(async (req, res) => {
     [user.rows[0].user_id, email, verificationToken, expiresAt]
   );
 
+  // Send verification email
+  try {
+    await sendResendVerificationEmail(email, verificationToken, user.rows[0].full_name || user.rows[0].username);
+  } catch (emailError) {
+    console.error("Failed to send verification email:", emailError);
+    // In development, still return the token
+    if (process.env.NODE_ENV !== "production") {
+      console.log("Development mode: Verification token:", verificationToken);
+    }
+  }
+
   res.status(200).json({
-    message: "Verification email sent",
-    verificationToken, // In production, send via email service
+    message: "Verification email sent. Please check your inbox.",
+    // Only return token in development for testing
+    ...(process.env.NODE_ENV !== "production" && { verificationToken }),
   });
 });
 

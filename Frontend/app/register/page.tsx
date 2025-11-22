@@ -36,16 +36,17 @@ export default function RegisterPage() {
         fullName: formState.name,
       })
       
-      // Get verification token from response
-      const verificationToken = result.verificationToken || result.user?.verificationToken
+      toast.success("Account created! Please check your email for verification link.")
+      
+      // Get verification token from response (only in development)
+      const verificationToken = result.verificationToken
       
       if (verificationToken) {
-        toast.success("Account created! Redirecting to email verification...")
-        // Redirect to verification page with token
+        // In development, redirect with token for testing
         router.push(`/verify-email?token=${verificationToken}`)
       } else {
-        toast.success("Account created! Please check your email for verification link.")
-        router.replace("/login")
+        // In production, redirect to email check page
+        router.push(`/verify-email?email=${encodeURIComponent(formState.email)}`)
       }
     } catch (error: any) {
       const message = error.data?.message || error.message || "Registration failed"

@@ -117,13 +117,11 @@ export default function SettingsPage() {
     try {
       await usersApi.deleteAccount(currentUser.id)
       toast.success("Account deleted successfully")
-      // Logout and redirect
-      setTimeout(() => {
-        useAppStore.getState().logout()
-        window.location.href = "/login"
-      }, 2000)
+      // Immediately logout and redirect
+      useAppStore.getState().logout()
+      window.location.href = "/login"
     } catch (error: any) {
-      toast.error(error.data?.message || "Failed to delete account")
+      toast.error(error.data?.message || error.message || "Failed to delete account")
       setIsDeleting(false)
     }
   }

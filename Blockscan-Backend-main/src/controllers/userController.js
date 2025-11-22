@@ -412,7 +412,47 @@ const deleteAccount = asyncHandler(async (req, res) => {
   try {
     await client.query("BEGIN");
 
-    // Delete user account (CASCADE will delete related wallets, token_holdings, etc.)
+    // Delete all related data first (explicit deletion for clarity)
+    // Delete email verifications
+    await client.query(
+      `DELETE FROM email_verifications WHERE user_id = $1`,
+      [userId]
+    );
+
+    // Delete p2p transactions
+    await client.query(
+      `DELETE FROM p2p_transactions WHERE buyer_id = $1 OR seller_id = $1`,
+      [userId]
+    );
+
+    // Delete p2p orders
+    await client.query(
+      `DELETE FROM p2p_orders WHERE seller_id = $1 OR buyer_id = $1`,
+      [userId]
+    );
+
+    // Delete transactions (via wallet cascade, but being explicit)
+    await client.query(
+      `DELETE FROM transactions 
+       WHERE from_wallet_id IN (SELECT wallet_id FROM wallets WHERE user_id = $1)
+          OR to_wallet_id IN (SELECT wallet_id FROM wallets WHERE user_id = $1)`,
+      [userId]
+    );
+
+    // Delete token holdings (via wallet cascade, but being explicit)
+    await client.query(
+      `DELETE FROM token_holdings 
+       WHERE wallet_id IN (SELECT wallet_id FROM wallets WHERE user_id = $1)`,
+      [userId]
+    );
+
+    // Delete wallets (CASCADE will handle token_holdings, but we already deleted them)
+    await client.query(
+      `DELETE FROM wallets WHERE user_id = $1`,
+      [userId]
+    );
+
+    // Finally, delete the user (this will cascade to any remaining references)
     await client.query(
       `DELETE FROM users WHERE user_id = $1`,
       [userId]
@@ -421,12 +461,17 @@ const deleteAccount = asyncHandler(async (req, res) => {
     await client.query("COMMIT");
 
     res.status(200).json({
+      success: true,
       message: "Account deleted successfully. All your data has been permanently removed.",
     });
   } catch (error) {
     await client.query("ROLLBACK");
     console.error("Error deleting account:", error);
-    throw error;
+    return res.status(500).json({
+      success: false,
+      message: "Failed to delete account. Please try again.",
+      error: process.env.NODE_ENV !== "production" ? error.message : undefined,
+    });
   } finally {
     client.release();
   }

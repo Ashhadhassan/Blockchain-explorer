@@ -64,11 +64,27 @@ const registerUser = asyncHandler(async (req, res) => {
 
     const newUser = result.rows[0];
 
+    // Automatically create a wallet for the new user with zero balance
+    const crypto = require("crypto");
+    const address = `0x${crypto.randomBytes(20).toString("hex")}`;
+    const publicKey = `0x${crypto.randomBytes(32).toString("hex")}`;
+    const walletLabel = fullName 
+      ? `${fullName}'s Wallet`
+      : `${username}'s Wallet`;
+
+    const walletResult = await client.query(
+      `INSERT INTO wallets (address, label, user_id, public_key, status, created_at)
+       VALUES ($1, $2, $3, $4, 'active', NOW())
+       RETURNING wallet_id, address, label, user_id, status, created_at`,
+      [address, walletLabel, newUser.user_id, publicKey]
+    );
+
     await client.query("COMMIT");
 
     res.status(201).json({
-      message: "User registered successfully.",
+      message: "User registered successfully. Wallet created automatically.",
       user: newUser,
+      wallet: walletResult.rows[0],
     });
   } catch (error) {
     await client.query("ROLLBACK");

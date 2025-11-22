@@ -419,15 +419,19 @@ const deleteAccount = asyncHandler(async (req, res) => {
       [userId]
     );
 
-    // Delete p2p transactions
+    // Delete p2p transactions that reference orders owned by this user
+    // OR transactions where this user is buyer/seller
     await client.query(
-      `DELETE FROM p2p_transactions WHERE buyer_id = $1 OR seller_id = $1`,
+      `DELETE FROM p2p_transactions 
+       WHERE buyer_id = $1 
+          OR seller_id = $1
+          OR order_id IN (SELECT order_id FROM p2p_orders WHERE user_id = $1)`,
       [userId]
     );
 
-    // Delete p2p orders
+    // Delete p2p orders (this will cascade delete any remaining transactions via order_id)
     await client.query(
-      `DELETE FROM p2p_orders WHERE seller_id = $1 OR buyer_id = $1`,
+      `DELETE FROM p2p_orders WHERE user_id = $1`,
       [userId]
     );
 

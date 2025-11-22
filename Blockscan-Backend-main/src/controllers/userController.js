@@ -379,7 +379,7 @@ const resendVerification = asyncHandler(async (req, res) => {
   }
 
   const user = await pool.query(
-    `SELECT user_id, email, email_verified FROM users WHERE email = $1`,
+    `SELECT user_id, email, email_verified, full_name, username FROM users WHERE email = $1`,
     [email]
   );
 
@@ -403,12 +403,15 @@ const resendVerification = asyncHandler(async (req, res) => {
 
   // Send verification email
   try {
-    await sendResendVerificationEmail(email, verificationToken, user.rows[0].full_name || user.rows[0].username);
+    const userName = user.rows[0].full_name || user.rows[0].username || "User";
+    await sendResendVerificationEmail(email, verificationToken, userName);
   } catch (emailError) {
     console.error("Failed to send verification email:", emailError);
     // In development, still return the token
     if (process.env.NODE_ENV !== "production") {
       console.log("Development mode: Verification token:", verificationToken);
+      const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+      console.log("Development mode: Verification URL:", `${baseUrl}/verify-email?token=${verificationToken}`);
     }
   }
 

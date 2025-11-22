@@ -25,7 +25,7 @@ Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\Users\Ashh
 Start-Sleep -Seconds 5
 
 Write-Host "Starting Frontend Server..." -ForegroundColor Cyan
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\Users\Ashhad Hassan\Videos\DB_PROJECT\frontend'; Write-Host '🎨 Frontend Server Starting...' -ForegroundColor Green; Write-Host 'Port: 3000' -ForegroundColor Cyan; Write-Host 'URL: http://localhost:3000' -ForegroundColor Cyan; Write-Host ''; npm run dev"
+Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd 'C:\Users\Ashhad Hassan\Videos\DB_PROJECT\Frontend'; Write-Host '🎨 Frontend Server Starting...' -ForegroundColor Green; Write-Host 'Port: 3000' -ForegroundColor Cyan; Write-Host 'URL: http://localhost:3000' -ForegroundColor Cyan; Write-Host ''; npm run dev"
 
 Write-Host "`n========================================" -ForegroundColor Green
 Write-Host "✅ Servers Starting!" -ForegroundColor Green

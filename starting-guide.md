@@ -175,7 +175,7 @@ Loaded ENV: { host: 'localhost', port: '5432', user: 'postgres', database: 'test
 
 ### Step 1: Navigate to Frontend Directory
 ```powershell
-cd "C:\Users\Ashhad Hassan\Videos\DB_PROJECT\frontend"
+cd "C:\Users\Ashhad Hassan\Videos\DB_PROJECT\Frontend"
 ```
 
 ### Step 2: Install Dependencies
@@ -232,7 +232,7 @@ npm start
 
 **Window 2 - Frontend:**
 ```powershell
-cd "C:\Users\Ashhad Hassan\Videos\DB_PROJECT\frontend"
+cd "C:\Users\Ashhad Hassan\Videos\DB_PROJECT\Frontend"
 npm run dev
 ```
 
@@ -397,7 +397,7 @@ Get-Process | Where-Object {$_.ProcessName -eq "node"} | Stop-Process -Force
    - Make sure these ports are not in use by other applications
 5. **Environment Files:**
    - Backend: `Blockscan-Backend-main/.env`
-   - Frontend: `frontend/.env.local`
+   - Frontend: `Frontend/.env.local`
 6. **Dummy Data:** Run seed scripts after creating database schema for testing
 
 ---

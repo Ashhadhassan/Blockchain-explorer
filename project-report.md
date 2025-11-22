@@ -10,7 +10,7 @@ This platform provides a complete solution for exploring blockchain data, managi
 
 ## 🛠️ Technology Stack
 
-### Frontend (`frontend/`)
+### Frontend (`Frontend/`)
 - **Framework**: Next.js 16.0.3 (React 19.2.0)
 - **Language**: TypeScript 5.x
 - **Styling**: Tailwind CSS 4.1.9
@@ -577,10 +577,10 @@ Blockscan-Backend-main/
 └── package.json
 ```
 
-### Frontend Structure (`frontend/`)
+### Frontend Structure (`Frontend/`)
 
 ```
-frontend/
+Frontend/
 ├── app/
 │   ├── (dashboard)/
 │   │   ├── dashboard/

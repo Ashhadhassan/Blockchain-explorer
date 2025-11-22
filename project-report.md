@@ -1,14 +1,16 @@
-# 📚 Blockchain Explorer - Complete Project Documentation
+# 📚 Blockchain Explorer - Project Report
 
 ## 🎯 Project Overview
 
 A comprehensive blockchain explorer platform with P2P trading capabilities, wallet management, market analysis, and user authentication. Built with a modern tech stack featuring Next.js frontend and Express.js backend, connected to PostgreSQL database.
 
+This platform provides a complete solution for exploring blockchain data, managing cryptocurrency wallets, conducting peer-to-peer trades, and analyzing market trends in a user-friendly interface.
+
 ---
 
 ## 🛠️ Technology Stack
 
-### Frontend (`Frontend/`)
+### Frontend (`frontend/`)
 - **Framework**: Next.js 16.0.3 (React 19.2.0)
 - **Language**: TypeScript 5.x
 - **Styling**: Tailwind CSS 4.1.9
@@ -575,10 +577,10 @@ Blockscan-Backend-main/
 └── package.json
 ```
 
-### Frontend Structure (`Frontend/`)
+### Frontend Structure (`frontend/`)
 
 ```
-Frontend/
+frontend/
 ├── app/
 │   ├── (dashboard)/
 │   │   ├── dashboard/
@@ -761,37 +763,6 @@ Frontend/
 
 ---
 
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js v18+
-- PostgreSQL 18
-- npm or yarn
-
-### Backend Setup
-```bash
-cd Blockscan-Backend-main
-npm install
-# Configure .env file
-npm start
-```
-
-### Frontend Setup
-```bash
-cd Frontend
-npm install
-# Configure .env.local file
-npm run dev
-```
-
-### Database Setup
-1. Create PostgreSQL database: `test`
-2. Run `database-schema.sql` to create tables
-3. Run `generate-dummy-users.js` to create dummy users
-4. Run `seed-token-holdings.js` to seed token holdings
-
----
-
 ## 📊 Data Flow
 
 ### Frontend → Backend
@@ -908,15 +879,6 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 
 ---
 
-## 📚 Additional Documentation
-
-- `STARTUP_GUIDE.md` - Detailed startup instructions
-- `QUICK_START.md` - Quick reference guide
-- `DUMMY_USERS_DOCUMENTATION.md` - Dummy user credentials
-- `SYSTEM_OVERVIEW.md` - System overview (older version)
-
----
-
 ## 🎯 Future Enhancements
 
 1. Implement bcrypt for password hashing
@@ -932,16 +894,20 @@ NEXT_PUBLIC_API_URL=http://localhost:5000
 
 ---
 
-## 📞 Support
+## 📊 Project Statistics
 
-For issues or questions, refer to:
-- Startup Guide: `STARTUP_GUIDE.md`
-- Quick Start: `QUICK_START.md`
-- Dummy Users: `DUMMY_USERS_DOCUMENTATION.md`
+- **20 Dummy Users**: Pre-configured for testing
+- **Complete P2P System**: Buy/sell orders with full transaction flow
+- **Wallet Operations**: Deposit, withdraw, transfer
+- **Market Data**: Trading pairs, charts, order books
+- **Email Verification**: Complete verification system
+- **Transaction Tracking**: Full transaction history
+- **10 Database Tables**: Comprehensive schema
+- **50+ API Endpoints**: Full REST API coverage
 
 ---
 
-**Last Updated**: 2025-01-23
-**Version**: 1.0.0
+**Last Updated**: January 2025  
+**Version**: 1.0.0  
 **Status**: Production Ready
 

@@ -50,62 +50,25 @@ const registerUser = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "User already exists" });
   }
 
-  // Generate verification token
-  const verificationToken = generateToken();
-  const expiresAt = new Date();
-  expiresAt.setHours(expiresAt.getHours() + 24); // 24 hours
-
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
-    // Create user (in production, hash password with bcrypt)
+    // Create user with email_verified = true (no email verification required)
     const result = await client.query(
-      `INSERT INTO users (username, email, password_hash, full_name, phone, verification_token, verification_expires)
-       VALUES ($1, $2, $3, $4, $5, $6, $7)
+      `INSERT INTO users (username, email, password_hash, full_name, phone, email_verified)
+       VALUES ($1, $2, $3, $4, $5, true)
        RETURNING user_id, username, email, full_name, email_verified, status, created_at`,
-      [username, email, password, fullName || null, phone || null, verificationToken, expiresAt]
+      [username, email, password, fullName || null, phone || null]
     );
 
     const newUser = result.rows[0];
 
-    // Create email verification record (ensure it's created)
-    try {
-      await client.query(
-        `INSERT INTO email_verifications (user_id, email, token, type, expires_at)
-         VALUES ($1, $2, $3, 'signup', $4)`,
-        [newUser.user_id, email, verificationToken, expiresAt]
-      );
-    } catch (verificationError) {
-      // If verification record creation fails, rollback user creation
-      console.error("Error creating email verification record:", verificationError);
-      await client.query("ROLLBACK");
-      return res.status(500).json({ 
-        message: "Failed to create verification record. Please try again.",
-        error: verificationError.message 
-      });
-    }
-
     await client.query("COMMIT");
 
-    // Send verification email
-    try {
-      await sendVerificationEmail(email, verificationToken, fullName);
-    } catch (emailError) {
-      // Log error but don't fail registration - email can be resent
-      console.error("Failed to send verification email:", emailError);
-      // In development, still return the token
-      if (process.env.NODE_ENV !== "production") {
-        console.log("Development mode: Verification token:", verificationToken);
-      }
-    }
-
     res.status(201).json({
-      message: "User registered successfully. Please check your email to verify your account.",
+      message: "User registered successfully.",
       user: newUser,
-      // Only return token in development for testing
-      ...(process.env.NODE_ENV !== "production" && { verificationToken }),
-      verificationUrl: `/verify-email?token=${verificationToken}`,
     });
   } catch (error) {
     await client.query("ROLLBACK");
@@ -427,8 +390,8 @@ const resendVerification = asyncHandler(async (req, res) => {
   });
 });
 
-// POST /api/users/request-delete-account
-const requestDeleteAccount = asyncHandler(async (req, res) => {
+// POST /api/users/delete-account
+const deleteAccount = asyncHandler(async (req, res) => {
   const { userId } = req.body;
 
   if (!userId) {
@@ -437,7 +400,7 @@ const requestDeleteAccount = asyncHandler(async (req, res) => {
 
   // Get user information
   const user = await pool.query(
-    `SELECT user_id, email, full_name, username FROM users WHERE user_id = $1`,
+    `SELECT user_id FROM users WHERE user_id = $1`,
     [userId]
   );
 
@@ -445,90 +408,9 @@ const requestDeleteAccount = asyncHandler(async (req, res) => {
     return res.status(404).json({ message: "User not found" });
   }
 
-  const userData = user.rows[0];
-
-  // Generate 6-digit verification code
-  const verificationCode = generateVerificationCode();
-  const expiresAt = new Date();
-  expiresAt.setMinutes(expiresAt.getMinutes() + 15); // 15 minutes expiration
-
-  // Store verification code in email_verifications table
-  // First, delete any existing unverified deletion codes for this user
-  await pool.query(
-    `DELETE FROM email_verifications 
-     WHERE user_id = $1 AND type = 'account_deletion' AND verified = false`,
-    [userData.user_id]
-  );
-  
-  // Insert new verification code
-  await pool.query(
-    `INSERT INTO email_verifications (user_id, email, token, type, expires_at)
-     VALUES ($1, $2, $3, 'account_deletion', $4)`,
-    [userData.user_id, userData.email, verificationCode, expiresAt]
-  );
-
-  // Send verification code via email
-  try {
-    const userName = userData.full_name || userData.username || "User";
-    await sendDeleteAccountCode(userData.email, verificationCode, userName);
-  } catch (emailError) {
-    console.error("Failed to send delete account verification email:", emailError);
-    // In development, still return the code
-    if (process.env.NODE_ENV !== "production") {
-      console.log("Development mode: Delete Account Verification Code:", verificationCode);
-    }
-  }
-
-  res.status(200).json({
-    message: "Verification code sent to your email. Please check your inbox.",
-    // Only return code in development for testing
-    ...(process.env.NODE_ENV !== "production" && { verificationCode }),
-  });
-});
-
-// POST /api/users/confirm-delete-account
-const confirmDeleteAccount = asyncHandler(async (req, res) => {
-  const { userId, code } = req.body;
-
-  if (!userId || !code) {
-    return res.status(400).json({ message: "User ID and verification code are required" });
-  }
-
-  // Verify the code
-  const verification = await pool.query(
-    `SELECT verification_id, user_id, email, expires_at, verified
-     FROM email_verifications 
-     WHERE user_id = $1 AND token = $2 AND type = 'account_deletion'
-     ORDER BY created_at DESC
-     LIMIT 1`,
-    [userId, code]
-  );
-
-  if (!verification.rows.length) {
-    return res.status(400).json({ message: "Invalid verification code" });
-  }
-
-  const ver = verification.rows[0];
-
-  // Check if code is expired
-  if (new Date(ver.expires_at) < new Date()) {
-    return res.status(400).json({ message: "Verification code has expired. Please request a new one." });
-  }
-
-  // Check if already used
-  if (ver.verified) {
-    return res.status(400).json({ message: "This verification code has already been used" });
-  }
-
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
-
-    // Mark verification as used
-    await client.query(
-      `UPDATE email_verifications SET verified = true WHERE verification_id = $1`,
-      [ver.verification_id]
-    );
 
     // Delete user account (CASCADE will delete related wallets, token_holdings, etc.)
     await client.query(
@@ -550,6 +432,7 @@ const confirmDeleteAccount = asyncHandler(async (req, res) => {
   }
 });
 
+
 module.exports = {
   getAllUsers,
   registerUser,
@@ -558,6 +441,5 @@ module.exports = {
   updateUserProfile,
   verifyEmail,
   resendVerification,
-  requestDeleteAccount,
-  confirmDeleteAccount,
+  deleteAccount,
 };

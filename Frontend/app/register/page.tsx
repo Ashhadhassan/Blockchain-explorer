@@ -36,18 +36,8 @@ export default function RegisterPage() {
         fullName: formState.name,
       })
       
-      toast.success("Account created! Please check your email for verification link.")
-      
-      // Get verification token from response (only in development)
-      const verificationToken = result.verificationToken
-      
-      if (verificationToken) {
-        // In development, redirect with token for testing
-        router.push(`/verify-email?token=${verificationToken}`)
-      } else {
-        // In production, redirect to email check page
-        router.push(`/verify-email?email=${encodeURIComponent(formState.email)}`)
-      }
+      toast.success("Account created successfully!")
+      router.push("/login")
     } catch (error: any) {
       const message = error.data?.message || error.message || "Registration failed"
       toast.error(message)

@@ -8,8 +8,7 @@ const {
   updateUserProfile,
   verifyEmail,
   resendVerification,
-  requestDeleteAccount,
-  confirmDeleteAccount,
+  deleteAccount,
 } = require("../controllers/userController");
 
 const router = express.Router();
@@ -19,8 +18,7 @@ router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.post("/verify-email", verifyEmail);
 router.post("/resend-verification", resendVerification);
-router.post("/request-delete-account", requestDeleteAccount);
-router.post("/confirm-delete-account", confirmDeleteAccount);
+router.post("/delete-account", deleteAccount);
 
 // GET routes - specific before dynamic
 router.get("/", getAllUsers);

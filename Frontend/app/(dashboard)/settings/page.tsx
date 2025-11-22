@@ -20,8 +20,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
-  const [deleteCode, setDeleteCode] = useState("")
-  const [isRequestingDelete, setIsRequestingDelete] = useState(false)
+  const [deleteConfirmText, setDeleteConfirmText] = useState("")
   const [isDeleting, setIsDeleting] = useState(false)
 
   // Form states
@@ -98,49 +97,25 @@ export default function SettingsPage() {
     }
   }
 
-  const handleResendVerification = async () => {
-    if (!currentUser) return
-    try {
-      await usersApi.resendVerification(currentUser.email)
-      toast.success("Verification email sent")
-    } catch (error: any) {
-      toast.error(error.data?.message || "Failed to send verification email")
-    }
-  }
 
-  const handleRequestDeleteAccount = async () => {
+  const handleDeleteAccount = async () => {
     if (!currentUser) return
     
-    setIsRequestingDelete(true)
-    try {
-      const result = await usersApi.requestDeleteAccount(currentUser.id)
-      toast.success(result.message || "Verification code sent to your email")
+    if (!showDeleteConfirm) {
+      // First confirmation - show the confirmation dialog
       setShowDeleteConfirm(true)
-      // In development, show the code
-      if (result.verificationCode) {
-        toast.info(`Development mode: Code is ${result.verificationCode}`)
-      }
-    } catch (error: any) {
-      toast.error(error.data?.message || "Failed to send verification code")
-    } finally {
-      setIsRequestingDelete(false)
-    }
-  }
-
-  const handleConfirmDeleteAccount = async () => {
-    if (!currentUser || !deleteCode) {
-      toast.error("Please enter the verification code")
       return
     }
 
-    if (deleteCode.length !== 6) {
-      toast.error("Verification code must be 6 digits")
+    // Second confirmation - check if user typed "DELETE"
+    if (deleteConfirmText !== "DELETE") {
+      toast.error('Please type "DELETE" to confirm')
       return
     }
 
     setIsDeleting(true)
     try {
-      await usersApi.confirmDeleteAccount(currentUser.id, deleteCode)
+      await usersApi.deleteAccount(currentUser.id)
       toast.success("Account deleted successfully")
       // Logout and redirect
       setTimeout(() => {
@@ -148,8 +123,7 @@ export default function SettingsPage() {
         window.location.href = "/login"
       }, 2000)
     } catch (error: any) {
-      toast.error(error.data?.message || "Failed to delete account. Invalid code or code expired.")
-    } finally {
+      toast.error(error.data?.message || "Failed to delete account")
       setIsDeleting(false)
     }
   }
@@ -263,19 +237,6 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <Label>Email Verification</Label>
-                    <p className="text-sm text-muted-foreground">Verify your email address</p>
-                  </div>
-                  {profile?.email_verified ? (
-                    <Badge className="bg-success text-white">Verified</Badge>
-                  ) : (
-                    <Button variant="outline" size="sm" onClick={handleResendVerification}>
-                      Verify Email
-                    </Button>
-                  )}
-                </div>
-                <div className="flex items-center justify-between">
-                  <div>
                     <Label>Two-Factor Authentication</Label>
                     <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
                   </div>
@@ -310,50 +271,35 @@ export default function SettingsPage() {
                   {!showDeleteConfirm ? (
                     <Button
                       variant="destructive"
-                      onClick={handleRequestDeleteAccount}
-                      disabled={isRequestingDelete}
+                      onClick={handleDeleteAccount}
                       className="w-full sm:w-auto"
                     >
-                      {isRequestingDelete ? (
-                        <>
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          Sending Code...
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete My Account
-                        </>
-                      )}
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Delete My Account
                     </Button>
                   ) : (
                     <div className="space-y-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
                       <div className="space-y-2">
-                        <Label htmlFor="deleteCode" className="text-destructive">
-                          Enter Verification Code
+                        <Label htmlFor="deleteConfirmText" className="text-destructive">
+                          Type "DELETE" to confirm
                         </Label>
                         <p className="text-xs text-muted-foreground">
-                          We've sent a 6-digit verification code to <strong>{currentUser.email}</strong>. 
-                          Please check your email and enter the code below.
+                          This action cannot be undone. All your data will be permanently deleted.
                         </p>
                         <Input
-                          id="deleteCode"
+                          id="deleteConfirmText"
                           type="text"
-                          placeholder="000000"
-                          value={deleteCode}
-                          onChange={(e) => setDeleteCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                          maxLength={6}
-                          className="text-center text-2xl tracking-widest font-mono"
+                          placeholder="Type DELETE here"
+                          value={deleteConfirmText}
+                          onChange={(e) => setDeleteConfirmText(e.target.value)}
+                          className="font-mono"
                         />
-                        <p className="text-xs text-muted-foreground">
-                          Code expires in 15 minutes
-                        </p>
                       </div>
                       <div className="flex gap-2">
                         <Button
                           variant="destructive"
-                          onClick={handleConfirmDeleteAccount}
-                          disabled={isDeleting || deleteCode.length !== 6}
+                          onClick={handleDeleteAccount}
+                          disabled={isDeleting || deleteConfirmText !== "DELETE"}
                           className="flex-1"
                         >
                           {isDeleting ? (

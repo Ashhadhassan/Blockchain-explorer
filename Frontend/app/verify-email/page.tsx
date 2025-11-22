@@ -93,8 +93,11 @@ function VerifyEmailContent() {
                   ✅ Wallet created automatically
                 </p>
               </div>
-              <Button asChild className="w-full">
-                <Link href="/login">Go to Login</Link>
+              <Button 
+                onClick={() => router.push("/login")} 
+                className="w-full"
+              >
+                Go to Login
               </Button>
             </div>
           </CardContent>

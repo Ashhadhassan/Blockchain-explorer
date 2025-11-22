@@ -50,10 +50,6 @@ export default function UserDetailPage({ params }: UserDetailPageProps) {
             <p>{user.organization}</p>
           </div>
           <div>
-            <p className="text-sm text-muted-foreground">Role</p>
-            <p className="capitalize">{user.role}</p>
-          </div>
-          <div>
             <p className="text-sm text-muted-foreground">Status</p>
             <StatusBadge status={user.status} />
           </div>

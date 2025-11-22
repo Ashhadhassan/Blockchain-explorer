@@ -59,7 +59,6 @@ export default function TokensPage() {
     )
   }, [tokens, query])
 
-  const isAdmin = currentUser?.role === "admin"
 
   const handleAddToken = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -81,13 +80,11 @@ export default function TokensPage() {
         title="Tokens"
         description="Centralized catalog of supported assets"
         actions={
-          isAdmin ? (
-            <Button onClick={() => setShowForm((state) => !state)}>{showForm ? "Close form" : "Add token"}</Button>
-          ) : null
+          <Button onClick={() => setShowForm((state) => !state)}>{showForm ? "Close form" : "Add token"}</Button>
         }
       />
 
-      {isAdmin && showForm && (
+      {showForm && (
         <Card className="border-border/50">
           <CardHeader>
             <CardTitle>Add token</CardTitle>

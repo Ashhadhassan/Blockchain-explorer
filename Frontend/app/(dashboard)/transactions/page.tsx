@@ -83,7 +83,6 @@ export default function TransactionsPage() {
     if (!walletId) return false
     const wallet = walletById[walletId]
     if (!wallet) return false
-    if (currentUser?.role === "admin") return true
     return wallet.userId === currentUser?.id
   }
 

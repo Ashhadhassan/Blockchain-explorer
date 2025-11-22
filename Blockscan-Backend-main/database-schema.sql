@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS email_verifications (
     user_id INTEGER REFERENCES users(user_id) ON DELETE CASCADE,
     email VARCHAR(255) NOT NULL,
     token VARCHAR(255) UNIQUE NOT NULL,
-    type VARCHAR(50) NOT NULL CHECK (type IN ('signup', 'transaction', 'password_reset')),
+    type VARCHAR(50) NOT NULL CHECK (type IN ('signup', 'transaction', 'password_reset', 'account_deletion')),
     related_id INTEGER, -- transaction_id or null
     verified BOOLEAN DEFAULT FALSE,
     expires_at TIMESTAMP NOT NULL,

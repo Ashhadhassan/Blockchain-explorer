@@ -108,7 +108,7 @@ export const useAppStore = create<AppStoreState>()(
             name: user.fullName || user.username,
             email: user.email,
             password: "", // Don't store password
-            role: "analyst" as const, // All users are regular users, no admin
+            role: "user" as const, // All users are regular users, no admin
             title: "User",
             organization: "BlockChain Explorer",
             status: user.status === "active" ? "active" : "suspended",
@@ -134,7 +134,7 @@ export const useAppStore = create<AppStoreState>()(
           name: payload.name,
           email: payload.email,
           password: payload.password,
-          role: payload.role ?? "analyst",
+          role: payload.role ?? "user",
           title: "Research Analyst",
           organization: "BlockView Labs",
           status: "active",

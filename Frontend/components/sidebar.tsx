@@ -31,12 +31,7 @@ export function Sidebar({ open, onOpenChange }: SidebarProps) {
     logout: state.logout,
   }))
 
-  const visibleNav = navigation.filter((item) => {
-    if (item.adminOnly) {
-      return currentUser?.role === "admin"
-    }
-    return true
-  })
+  const visibleNav = navigation
 
   return (
     <>

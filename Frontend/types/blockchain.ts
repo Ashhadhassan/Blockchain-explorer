@@ -1,11 +1,11 @@
-export type UserRole = "admin" | "analyst" | "auditor"
+export type UserRole = "user"
 
 export interface AppUser {
   id: string
   name: string
   email: string
   password: string
-  role: UserRole
+  role?: UserRole
   title: string
   organization: string
   status: "active" | "away" | "suspended"

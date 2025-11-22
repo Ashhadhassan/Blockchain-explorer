@@ -30,8 +30,7 @@ export default function WalletDetailPage({ params }: WalletDetailPageProps) {
     return null
   }
 
-  const isAdmin = currentUser?.role === "admin"
-  const canView = isAdmin || wallet.userId === currentUser?.id
+  const canView = wallet.userId === currentUser?.id
 
   if (!canView) {
     return (
@@ -65,7 +64,6 @@ export default function WalletDetailPage({ params }: WalletDetailPageProps) {
 
   const canOpenWallet = (walletId: string | undefined) => {
     if (!walletId) return false
-    if (isAdmin) return true
     const target = wallets.find((entry) => entry.id === walletId)
     return target?.userId === currentUser?.id
   }
@@ -91,17 +89,7 @@ export default function WalletDetailPage({ params }: WalletDetailPageProps) {
           </div>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">Owner</p>
-            {owner ? (
-              isAdmin ? (
-                <Link href={`/users/${owner.id}`} className="text-primary hover:underline">
-                  {owner.name}
-                </Link>
-              ) : (
-                owner.name
-              )
-            ) : (
-              wallet.userId
-            )}
+            {owner ? owner.name : wallet.userId}
           </div>
           <div className="space-y-3">
             <p className="text-sm text-muted-foreground">Status</p>

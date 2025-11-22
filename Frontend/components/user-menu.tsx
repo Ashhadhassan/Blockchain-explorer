@@ -1,7 +1,7 @@
 "use client"
 
 import Image from "next/image"
-import { LogOut, ShieldCheck } from "lucide-react"
+import { LogOut } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -32,7 +32,7 @@ export function UserMenu() {
           </div>
           <div className="text-left">
             <p className="text-sm font-medium leading-none">{currentUser.name}</p>
-            <p className="text-xs text-muted-foreground">{currentUser.role}</p>
+            <p className="text-xs text-muted-foreground">{currentUser.email}</p>
           </div>
         </Button>
       </DropdownMenuTrigger>
@@ -43,11 +43,6 @@ export function UserMenu() {
             <p className="text-xs text-muted-foreground">{currentUser.email}</p>
           </div>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem className="gap-2">
-          <ShieldCheck className="h-4 w-4" />
-          <span>Role: {currentUser.role}</span>
-        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="gap-2 text-destructive focus:text-destructive"

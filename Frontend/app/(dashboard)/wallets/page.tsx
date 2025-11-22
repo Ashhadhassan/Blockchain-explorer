@@ -36,13 +36,11 @@ export default function WalletsPage() {
   })
   const [holdings, setHoldings] = useState<{ tokenId: string; amount: number }[]>([])
 
-  const isAdmin = currentUser?.role === "admin"
   const ownersById = useMemo(() => Object.fromEntries(users.map((user) => [user.id, user])), [users])
   const visibleWallets = useMemo(() => {
-    if (isAdmin) return wallets
     if (!currentUser) return []
     return wallets.filter((wallet) => wallet.userId === currentUser.id)
-  }, [wallets, currentUser, isAdmin])
+  }, [wallets, currentUser])
 
   const filteredWallets = useMemo(() => {
     if (!searchTerm) return visibleWallets
@@ -102,22 +100,16 @@ export default function WalletsPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title={isAdmin ? "Wallets" : "My Wallets"}
-        description={
-          isAdmin
-            ? "Manage every wallet in the SolChain workspace."
-            : "Wallets assigned to your SolChain identity."
-        }
+        title="My Wallets"
+        description="Wallets assigned to your account."
         actions={
-          isAdmin && (
-            <Button onClick={() => setIsCreating((state) => !state)}>
-              {isCreating ? "Close form" : "Create wallet"}
-            </Button>
-          )
+          <Button onClick={() => setIsCreating((state) => !state)}>
+            {isCreating ? "Close form" : "Create wallet"}
+          </Button>
         }
       />
 
-      {isAdmin && isCreating && (
+      {isCreating && (
         <Card className="border-border/50">
           <CardHeader>
             <CardTitle>New wallet</CardTitle>
@@ -204,14 +196,14 @@ export default function WalletsPage() {
 
       <Card className="border-border/50">
         <CardHeader>
-          <CardTitle>{isAdmin ? "Wallet inventory" : "My wallet inventory"}</CardTitle>
+          <CardTitle>My wallet inventory</CardTitle>
           <CardDescription>
-            {isAdmin ? "Click a wallet to inspect balances and history." : "Track balances across your wallets."}
+            Track balances across your wallets.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <SearchInput
-            placeholder={isAdmin ? "Search by label, address, or owner..." : "Search by label or address..."}
+            placeholder="Search by label or address..."
             value={searchTerm}
             onChange={(event) => setSearchTerm(event.target.value)}
           />
@@ -220,7 +212,6 @@ export default function WalletsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Wallet</TableHead>
-                  {isAdmin && <TableHead>Owner</TableHead>}
                   <TableHead>Holdings</TableHead>
                   <TableHead>Address</TableHead>
                   <TableHead>Created</TableHead>
@@ -242,17 +233,6 @@ export default function WalletsPage() {
                           {wallet.label}
                         </Link>
                       </TableCell>
-                      {isAdmin && (
-                        <TableCell>
-                          {owner ? (
-                            <Link href={`/users/${owner.id}`} className="hover:underline">
-                              {owner.name}
-                            </Link>
-                          ) : (
-                            wallet.userId
-                          )}
-                        </TableCell>
-                      )}
                       <TableCell className="text-sm text-muted-foreground">{holdingSymbols || "—"}</TableCell>
                       <TableCell className="flex items-center gap-2 font-mono text-xs">
                         <Link href={`/wallets/${wallet.id}`} className="hover:underline">
@@ -269,8 +249,8 @@ export default function WalletsPage() {
                 })}
                 {filteredWallets.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={isAdmin ? 6 : 5} className="text-center text-muted-foreground">
-                      {isAdmin ? "No wallets match the current filters." : "No wallets assigned to your user yet."}
+                    <TableCell colSpan={5} className="text-center text-muted-foreground">
+                      No wallets assigned to your account yet.
                     </TableCell>
                   </TableRow>
                 )}

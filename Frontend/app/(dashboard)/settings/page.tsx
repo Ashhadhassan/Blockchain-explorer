@@ -178,29 +178,6 @@ export default function SettingsPage() {
                   <div className="space-y-2">
                     <Label>Email</Label>
                     <Input value={currentUser.email} disabled className="bg-[#1E2329]" />
-                    <div className="flex items-center gap-2 mt-2">
-                      {profile?.email_verified ? (
-                        <Badge className="bg-success text-white">
-                          <Mail className="h-3 w-3 mr-1" />
-                          Verified
-                        </Badge>
-                      ) : (
-                        <>
-                          <Badge variant="outline" className="border-warning text-warning">
-                            <Mail className="h-3 w-3 mr-1" />
-                            Not Verified
-                          </Badge>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={handleResendVerification}
-                          >
-                            Resend Verification
-                          </Button>
-                        </>
-                      )}
-                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label>Full Name</Label>

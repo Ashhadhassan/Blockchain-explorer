@@ -453,10 +453,17 @@ const requestDeleteAccount = asyncHandler(async (req, res) => {
   expiresAt.setMinutes(expiresAt.getMinutes() + 15); // 15 minutes expiration
 
   // Store verification code in email_verifications table
+  // First, delete any existing unverified deletion codes for this user
+  await pool.query(
+    `DELETE FROM email_verifications 
+     WHERE user_id = $1 AND type = 'account_deletion' AND verified = false`,
+    [userData.user_id]
+  );
+  
+  // Insert new verification code
   await pool.query(
     `INSERT INTO email_verifications (user_id, email, token, type, expires_at)
-     VALUES ($1, $2, $3, 'account_deletion', $4)
-     ON CONFLICT (token) DO UPDATE SET expires_at = $4, created_at = NOW()`,
+     VALUES ($1, $2, $3, 'account_deletion', $4)`,
     [userData.user_id, userData.email, verificationCode, expiresAt]
   );
 

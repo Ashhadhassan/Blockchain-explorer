@@ -1,0 +1,42 @@
+[
+  {
+    "id": "block-91230",
+    "height": 91230,
+    "hash": "0xb10cf5a8390be9de7f2c4a8817b02f43c3d2f9d0bae1c7",
+    "timestamp": "2025-01-15T10:50:00.000Z",
+    "validatorId": "validator-northwind",
+    "status": "finalized",
+    "gasUsed": 1890021,
+    "gasLimit": 3000000,
+    "sizeKb": 1432,
+    "reward": 2.1,
+    "transactionIds": ["tx-eth-bridge", "tx-sol-ops"]
+  },
+  {
+    "id": "block-91231",
+    "height": 91231,
+    "hash": "0xb10cf5a8390be9de7f2c4a8817b02f43c3d2f9d0bae1f2",
+    "timestamp": "2025-01-15T11:14:00.000Z",
+    "validatorId": "validator-hikari",
+    "status": "finalized",
+    "gasUsed": 2103944,
+    "gasLimit": 3000000,
+    "sizeKb": 1568,
+    "reward": 2.1,
+    "transactionIds": ["tx-treasury-usdc", "tx-ops-sol"]
+  },
+  {
+    "id": "block-91232",
+    "height": 91232,
+    "hash": "0xb10cf5a8390be9de7f2c4a8817b02f43c3d2f9d0bae1ff",
+    "timestamp": "2025-01-15T12:02:00.000Z",
+    "validatorId": "validator-aurora",
+    "status": "pending",
+    "gasUsed": 1720011,
+    "gasLimit": 3000000,
+    "sizeKb": 1180,
+    "reward": 2.1,
+    "transactionIds": ["tx-ops-eth", "tx-airdrop-usdc"]
+  }
+]
+

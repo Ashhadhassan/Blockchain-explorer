@@ -1,0 +1,81 @@
+[
+  {
+    "id": "tx-eth-bridge",
+    "hash": "0x123f1a8cd9ab12ee7722ef90345caa678910aa111bbccddeeff001122334455",
+    "fromWalletId": "wallet-ava-main",
+    "toWalletId": "wallet-raj-research",
+    "tokenId": "token-eth",
+    "blockId": "block-91230",
+    "amount": 1.8,
+    "fee": 0.0021,
+    "status": "confirmed",
+    "timestamp": "2025-01-15T10:45:00.000Z",
+    "method": "Bridge Transfer"
+  },
+  {
+    "id": "tx-sol-ops",
+    "hash": "0x223f1a8cd9ab12ee7722ef90345caa678910aa111bbccddeeff001122334455",
+    "fromWalletId": "wallet-raj-research",
+    "toWalletId": "wallet-ava-airdrop",
+    "tokenId": "token-sol",
+    "blockId": "block-91230",
+    "amount": 250,
+    "fee": 0.001,
+    "status": "confirmed",
+    "timestamp": "2025-01-15T10:47:00.000Z",
+    "method": "Treasury Sweep"
+  },
+  {
+    "id": "tx-treasury-usdc",
+    "hash": "0x323f1a8cd9ab12ee7722ef90345caa678910aa111bbccddeeff001122334455",
+    "fromWalletId": "wallet-ava-airdrop",
+    "toWalletId": "wallet-lena-audit",
+    "tokenId": "token-usdc",
+    "blockId": "block-91231",
+    "amount": 7500,
+    "fee": 0.0005,
+    "status": "confirmed",
+    "timestamp": "2025-01-15T11:05:00.000Z",
+    "method": "Audit Refill"
+  },
+  {
+    "id": "tx-ops-sol",
+    "hash": "0x423f1a8cd9ab12ee7722ef90345caa678910aa111bbccddeeff001122334455",
+    "fromWalletId": "wallet-ava-main",
+    "toWalletId": "wallet-raj-research",
+    "tokenId": "token-sol",
+    "blockId": "block-91231",
+    "amount": 120,
+    "fee": 0.0012,
+    "status": "confirmed",
+    "timestamp": "2025-01-15T11:08:00.000Z",
+    "method": "Ops Distribution"
+  },
+  {
+    "id": "tx-ops-eth",
+    "hash": "0x523f1a8cd9ab12ee7722ef90345caa678910aa111bbccddeeff001122334455",
+    "fromWalletId": "wallet-raj-research",
+    "toWalletId": "wallet-lena-audit",
+    "tokenId": "token-eth",
+    "blockId": "block-91232",
+    "amount": 0.85,
+    "fee": 0.0023,
+    "status": "pending",
+    "timestamp": "2025-01-15T11:54:00.000Z",
+    "method": "Ops Settlement"
+  },
+  {
+    "id": "tx-airdrop-usdc",
+    "hash": "0x623f1a8cd9ab12ee7722ef90345caa678910aa111bbccddeeff001122334455",
+    "fromWalletId": "wallet-ava-airdrop",
+    "toWalletId": "wallet-raj-research",
+    "tokenId": "token-usdc",
+    "blockId": "block-91232",
+    "amount": 2000,
+    "fee": 0.0004,
+    "status": "pending",
+    "timestamp": "2025-01-15T11:59:00.000Z",
+    "method": "Campaign Funding"
+  }
+]
+

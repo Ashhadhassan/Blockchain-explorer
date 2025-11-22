@@ -1,0 +1,42 @@
+[
+  {
+    "id": "user-ava",
+    "name": "Ava Li",
+    "email": "ava@blockview.io",
+    "password": "admin123",
+    "role": "admin",
+    "title": "Head of Research",
+    "organization": "BlockView Labs",
+    "status": "active",
+    "lastLogin": "2025-01-16T09:24:00.000Z",
+    "createdAt": "2024-05-12T12:00:00.000Z",
+    "avatar": "/placeholder-user.jpg"
+  },
+  {
+    "id": "user-raj",
+    "name": "Raj Patel",
+    "email": "raj@blockview.io",
+    "password": "analyst123",
+    "role": "analyst",
+    "title": "Risk Analyst",
+    "organization": "BlockView Labs",
+    "status": "active",
+    "lastLogin": "2025-01-15T18:05:00.000Z",
+    "createdAt": "2024-08-02T14:30:00.000Z",
+    "avatar": "/placeholder-user.jpg"
+  },
+  {
+    "id": "user-lena",
+    "name": "Lena Brooks",
+    "email": "lena@blockview.io",
+    "password": "auditor123",
+    "role": "auditor",
+    "title": "Compliance Lead",
+    "organization": "BlockView Labs",
+    "status": "away",
+    "lastLogin": "2025-01-12T07:42:00.000Z",
+    "createdAt": "2024-09-20T09:15:00.000Z",
+    "avatar": "/placeholder-user.jpg"
+  }
+]
+

@@ -1,0 +1,36 @@
+[
+  {
+    "id": "validator-northwind",
+    "name": "Northwind Staker",
+    "status": "active",
+    "totalStake": 245000,
+    "commission": 5,
+    "uptime": 99.52,
+    "location": "Chicago, US",
+    "lastActive": "2025-01-16T10:10:00.000Z",
+    "blocksProduced": 5231
+  },
+  {
+    "id": "validator-hikari",
+    "name": "Hikari Labs",
+    "status": "active",
+    "totalStake": 188500,
+    "commission": 4,
+    "uptime": 99.21,
+    "location": "Kyoto, JP",
+    "lastActive": "2025-01-16T09:58:00.000Z",
+    "blocksProduced": 4988
+  },
+  {
+    "id": "validator-aurora",
+    "name": "Aurora Nodeworks",
+    "status": "jailed",
+    "totalStake": 92000,
+    "commission": 6,
+    "uptime": 96.42,
+    "location": "Lisbon, PT",
+    "lastActive": "2025-01-15T02:33:00.000Z",
+    "blocksProduced": 3122
+  }
+]
+

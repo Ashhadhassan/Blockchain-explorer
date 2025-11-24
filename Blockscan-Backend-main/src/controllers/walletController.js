@@ -1,9 +1,18 @@
-// src/controllers/walletController.js
+/**
+ * Wallet Controller
+ * Handles wallet operations including creation, balance queries, deposits, withdrawals, and transfers
+ * @module walletController
+ */
+
 const { pool } = require("../config/connectDB");
 const asyncHandler = require("../utils/asyncHandler");
 const crypto = require("crypto");
 
-// Generate wallet address
+/**
+ * Generate a random wallet address
+ * Creates a unique Ethereum-style address (0x + 40 hex characters)
+ * @returns {string} Wallet address
+ */
 const generateAddress = () => `0x${crypto.randomBytes(20).toString("hex")}`;
 
 // GET /api/wallets

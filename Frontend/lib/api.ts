@@ -1,4 +1,10 @@
-// lib/api.ts
+/**
+ * API Service Layer
+ * Provides typed API methods for all backend endpoints
+ * Transforms backend responses to frontend-compatible formats
+ * @module api
+ */
+
 import { api } from "./api-client";
 import {
   transformBlock,
@@ -9,7 +15,9 @@ import {
 } from "./transformers";
 import type { Block, Wallet, Token, Transaction, Validator } from "@/types/blockchain";
 
-// Blocks
+// ============================================================================
+// Blocks API
+// ============================================================================
 export const blocksApi = {
   getLatest: async (limit = 10): Promise<Block[]> => {
     const response = await api.get<{ blocks: any[] }>(`/api/blocks/latest?limit=${limit}`);
@@ -25,7 +33,9 @@ export const blocksApi = {
   },
 };
 
-// Wallets
+// ============================================================================
+// Wallets API
+// ============================================================================
 export const walletsApi = {
   getAll: async (userId?: string): Promise<Wallet[]> => {
     const url = userId ? `/api/wallets?userId=${userId}` : "/api/wallets";
@@ -96,7 +106,9 @@ export const walletsApi = {
   },
 };
 
-// Tokens
+// ============================================================================
+// Tokens API
+// ============================================================================
 export const tokensApi = {
   getAll: async (limit = 100, offset = 0): Promise<Token[]> => {
     const response = await api.get<{ tokens: any[] }>(`/api/tokens?limit=${limit}&offset=${offset}`);
@@ -112,7 +124,9 @@ export const tokensApi = {
   },
 };
 
-// Transactions
+// ============================================================================
+// Transactions API
+// ============================================================================
 export const transactionsApi = {
   getAll: async (limit = 50, offset = 0): Promise<Transaction[]> => {
     const response = await api.get<{ transactions: any[] }>(
@@ -136,7 +150,9 @@ export const transactionsApi = {
   },
 };
 
-// Validators
+// ============================================================================
+// Validators API
+// ============================================================================
 export const validatorsApi = {
   getById: async (id: string): Promise<Validator> => {
     const response = await api.get<{ validator: any }>(`/api/validators/${id}`);
@@ -148,7 +164,9 @@ export const validatorsApi = {
   },
 };
 
-// Search
+// ============================================================================
+// Search API
+// ============================================================================
 export const searchApi = {
   wallets: async (query: string): Promise<any[]> => {
     const response = await api.get<{ wallets: any[] }>(`/api/search/wallets?q=${encodeURIComponent(query)}`);
@@ -162,7 +180,9 @@ export const searchApi = {
   },
 };
 
-// Users
+// ============================================================================
+// Users API
+// ============================================================================
 export const usersApi = {
   getAll: async (limit = 100, offset = 0): Promise<any[]> => {
     const response = await api.get<{ users: any[] }>(`/api/users?limit=${limit}&offset=${offset}`);
@@ -218,7 +238,9 @@ export const usersApi = {
   },
 };
 
-// P2P
+// ============================================================================
+// P2P API
+// ============================================================================
 export const p2pApi = {
   getUsersWithTokens: async (): Promise<any[]> => {
     const response = await api.get<{ users: any[] }>("/api/p2p/users-with-tokens");
@@ -300,7 +322,9 @@ export const p2pApi = {
   },
 };
 
-// Email
+// ============================================================================
+// Email API
+// ============================================================================
 export const emailApi = {
   getNotifications: async (userId: number): Promise<any[]> => {
     const response = await api.get<{ notifications: any[] }>(`/api/email/notifications?userId=${userId}`);
@@ -311,7 +335,9 @@ export const emailApi = {
   },
 };
 
-// Market
+// ============================================================================
+// Market API
+// ============================================================================
 export const marketApi = {
   getTradingPairs: async (): Promise<any[]> => {
     const response = await api.get<{ pairs: any[] }>("/api/market/trading-pairs");
@@ -333,7 +359,9 @@ export const marketApi = {
   },
 };
 
-// Wallet Management
+// ============================================================================
+// Wallet Management API
+// ============================================================================
 export const walletManagementApi = {
   deposit: async (address: string, tokenId: number, amount: number): Promise<void> => {
     await api.post(`/api/wallets/${address}/deposit`, { tokenId, amount });

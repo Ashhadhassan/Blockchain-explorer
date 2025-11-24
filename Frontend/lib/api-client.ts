@@ -1,6 +1,15 @@
-// lib/api-client.ts
+/**
+ * API Client
+ * Provides a centralized HTTP client for making API requests to the backend
+ * @module api-client
+ */
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
 
+/**
+ * Custom API Error class
+ * Extends Error to include HTTP status information
+ */
 class ApiError extends Error {
   constructor(
     public status: number,
@@ -12,6 +21,14 @@ class ApiError extends Error {
   }
 }
 
+/**
+ * Make an API request with error handling
+ * @template T - Response type
+ * @param {string} endpoint - API endpoint (without base URL)
+ * @param {RequestInit} options - Fetch API options
+ * @returns {Promise<T>} Parsed JSON response
+ * @throws {ApiError} If the request fails or returns an error status
+ */
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -62,6 +79,9 @@ async function apiRequest<T>(
   }
 }
 
+/**
+ * API client object with HTTP methods
+ */
 export const api = {
   get: <T>(endpoint: string) => apiRequest<T>(endpoint, { method: "GET" }),
   post: <T>(endpoint: string, body?: any) =>

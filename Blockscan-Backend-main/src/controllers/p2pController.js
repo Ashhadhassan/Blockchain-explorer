@@ -1,9 +1,17 @@
-// src/controllers/p2pController.js
+/**
+ * P2P Controller
+ * Handles peer-to-peer trading operations including order management and transaction processing
+ * @module p2pController
+ */
+
 const { pool } = require("../config/connectDB");
 const asyncHandler = require("../utils/asyncHandler");
 const crypto = require("crypto");
 
-// Generate transaction hash
+/**
+ * Generate a random transaction hash
+ * @returns {string} Transaction hash in format 0x[64 hex characters]
+ */
 const generateTxHash = () => `0x${crypto.randomBytes(32).toString("hex")}`;
 
 // POST /api/p2p/orders - Create P2P order

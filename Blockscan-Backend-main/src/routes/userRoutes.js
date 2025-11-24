@@ -1,4 +1,9 @@
-// src/routes/userRoutes.js
+/**
+ * User Routes
+ * Defines all user-related API endpoints
+ * @module userRoutes
+ */
+
 const express = require("express");
 const {
   registerUser,
@@ -13,16 +18,31 @@ const {
 
 const router = express.Router();
 
-// POST routes (specific)
+// ============================================================================
+// Authentication Routes
+// ============================================================================
+
 router.post("/register", registerUser);
 router.post("/login", loginUser);
+
+// ============================================================================
+// Email Verification Routes
+// ============================================================================
+
 router.post("/verify-email", verifyEmail);
 router.post("/resend-verification", resendVerification);
+
+// ============================================================================
+// Account Management Routes
+// ============================================================================
+
 router.post("/delete-account", deleteAccount);
 
-// GET routes - specific before dynamic
+// ============================================================================
+// User Profile Routes
+// ============================================================================
+
 router.get("/", getAllUsers);
-// Dynamic routes must come last
 router.get("/:id", getUserProfile);
 router.put("/:id", updateUserProfile);
 

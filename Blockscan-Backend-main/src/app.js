@@ -1,7 +1,14 @@
-// src/app.js
+/**
+ * Express Application Configuration
+ * Sets up middleware, routes, and error handling
+ * @module app
+ */
+
 const express = require("express");
 const cors = require("cors");
+const { errorHandler, notFound } = require("./middleware/errorHandler");
 
+// Import route modules
 const walletRoutes = require("./routes/walletRoutes.js");
 const blockRoutes = require("./routes/blockRoutes.js");
 const tokenRoutes = require("./routes/tokenRoutes.js");
@@ -15,12 +22,20 @@ const marketRoutes = require("./routes/marketRoutes.js");
 
 const app = express();
 
+// ============================================================================
+// Middleware Configuration
+// ============================================================================
 
-// Middlewares
+// Enable CORS for all routes
 app.use(cors());
+
+// Parse JSON request bodies
 app.use(express.json());
 
-// Routes
+// ============================================================================
+// API Routes
+// ============================================================================
+
 app.use("/api/wallets", walletRoutes);
 app.use("/api/blocks", blockRoutes);
 app.use("/api/tokens", tokenRoutes);
@@ -32,9 +47,38 @@ app.use("/api/p2p", p2pRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/market", marketRoutes);
 
-// Default route
+// ============================================================================
+// Health Check & Default Routes
+// ============================================================================
+
 app.get("/", (req, res) => {
-  res.send("SolScan Backend Running...");
+  res.json({
+    message: "Blockchain Explorer API",
+    version: "1.0.0",
+    status: "running",
+    endpoints: {
+      wallets: "/api/wallets",
+      blocks: "/api/blocks",
+      tokens: "/api/tokens",
+      validators: "/api/validators",
+      transactions: "/api/transactions",
+      users: "/api/users",
+      p2p: "/api/p2p",
+      search: "/api/search",
+      email: "/api/email",
+      market: "/api/market",
+    },
+  });
 });
+
+// ============================================================================
+// Error Handling Middleware
+// ============================================================================
+
+// 404 handler for undefined routes
+app.use(notFound);
+
+// Global error handler
+app.use(errorHandler);
 
 module.exports = app;

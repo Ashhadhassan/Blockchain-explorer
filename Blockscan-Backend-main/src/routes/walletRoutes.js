@@ -1,6 +1,10 @@
-// src/routes/walletRoutes.js
-const express = require("express");
+/**
+ * Wallet Routes
+ * Defines all wallet-related API endpoints
+ * @module walletRoutes
+ */
 
+const express = require("express");
 const {
   getWalletDetails,
   getWalletHoldings,
@@ -15,16 +19,25 @@ const {
 
 const router = express.Router();
 
-// Specific routes first (before dynamic :address route)
+// ============================================================================
+// Wallet Management Routes
+// ============================================================================
+
 router.get("/", getAllWallets);
 router.post("/", createWallet);
 
-// POST routes for wallet operations (must come before GET /:address)
+// ============================================================================
+// Wallet Operation Routes (must come before GET /:address)
+// ============================================================================
+
 router.post("/:address/deposit", depositToWallet);
 router.post("/:address/withdraw", withdrawFromWallet);
 router.post("/:address/transfer", transferBetweenWallets);
 
-// GET routes for wallet details (dynamic routes last)
+// ============================================================================
+// Wallet Query Routes (dynamic routes last)
+// ============================================================================
+
 router.get("/:address/holdings", getWalletHoldings);
 router.get("/:address/transactions", getWalletTransactions);
 router.get("/:address/balance", getWalletBalance);

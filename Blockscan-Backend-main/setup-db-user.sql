@@ -16,11 +16,11 @@ END
 $$;
 
 -- Create database if it doesn't exist
-SELECT 'CREATE DATABASE test'
-WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'test')\gexec
+SELECT 'CREATE DATABASE blockscan'
+WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'blockscan')\gexec
 
 -- Grant privileges
-GRANT ALL PRIVILEGES ON DATABASE test TO dbuser;
+GRANT ALL PRIVILEGES ON DATABASE blockscan TO dbuser;
 
 -- Also update postgres user password
 ALTER USER postgres WITH PASSWORD '1234';

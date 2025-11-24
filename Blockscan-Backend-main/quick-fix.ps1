@@ -49,13 +49,13 @@ if ($LASTEXITCODE -eq 0) {
 # Check database
 Write-Host ""
 Write-Host "Checking database..." -ForegroundColor Yellow
-$dbCheck = & "$pgBin\psql.exe" -U postgres -h localhost -lqt 2>&1 | Select-String "test"
+$dbCheck = & "$pgBin\psql.exe" -U postgres -h localhost -lqt 2>&1 | Select-String "blockscan"
 
 if ($dbCheck) {
-    Write-Host "✅ Database 'test' exists" -ForegroundColor Green
+    Write-Host "✅ Database 'blockscan' exists" -ForegroundColor Green
 } else {
-    Write-Host "⚠️  Database 'test' may not exist" -ForegroundColor Yellow
-    Write-Host "   Run: CREATE DATABASE test; in pgAdmin" -ForegroundColor White
+    Write-Host "⚠️  Database 'blockscan' may not exist" -ForegroundColor Yellow
+    Write-Host "   Run: CREATE DATABASE blockscan; in pgAdmin" -ForegroundColor White
 }
 
 Write-Host ""

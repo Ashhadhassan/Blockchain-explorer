@@ -1,7 +1,14 @@
-// lib/transformers.ts
+/**
+ * Data Transformers
+ * Converts backend snake_case responses to frontend camelCase format
+ * @module transformers
+ */
+
 import type { Block, Wallet, Token, Transaction, Validator } from "@/types/blockchain";
 
-// Transform snake_case to camelCase
+/**
+ * Transform block data from backend format to frontend format
+ */
 export const transformBlock = (data: any): Block => ({
   id: data.block_id?.toString() || "",
   height: parseInt(data.height) || 0,
@@ -16,6 +23,9 @@ export const transformBlock = (data: any): Block => ({
   transactionIds: (data.transaction_ids || []).map((id: any) => id?.toString() || ""),
 });
 
+/**
+ * Transform wallet data from backend format to frontend format
+ */
 export const transformWallet = (data: any): Wallet => ({
   id: data.wallet_id?.toString() || "",
   label: data.label || "",
@@ -30,6 +40,9 @@ export const transformWallet = (data: any): Wallet => ({
   })) || [],
 });
 
+/**
+ * Transform token data from backend format to frontend format
+ */
 export const transformToken = (data: any): Token => ({
   id: data.token_id?.toString() || "",
   symbol: data.token_symbol || "",
@@ -42,6 +55,9 @@ export const transformToken = (data: any): Token => ({
   volume24h: parseFloat(data.volume_24h) || 0,
 });
 
+/**
+ * Transform transaction data from backend format to frontend format
+ */
 export const transformTransaction = (data: any): Transaction => ({
   id: data.transaction_id?.toString() || "",
   hash: data.tx_hash || data.hash || "",
@@ -58,6 +74,9 @@ export const transformTransaction = (data: any): Transaction => ({
   method: data.method || "transfer",
 });
 
+/**
+ * Transform validator data from backend format to frontend format
+ */
 export const transformValidator = (data: any): Validator => ({
   id: data.validator_id?.toString() || "",
   name: data.validator_name || "",

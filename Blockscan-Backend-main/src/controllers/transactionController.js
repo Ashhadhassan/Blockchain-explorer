@@ -1,45 +1,78 @@
-// src/controllers/transactionController.js
+/**
+ * Transaction Controller
+ * Handles all transaction-related operations including creation, retrieval, and details
+ * @module transactionController
+ */
+
 const { pool } = require("../config/connectDB");
 const asyncHandler = require("../utils/asyncHandler");
 const crypto = require("crypto");
 
-// Generate random hash for transaction
+/**
+ * Generate a random transaction hash
+ * Creates a unique hexadecimal hash for blockchain transactions
+ * @returns {string} Transaction hash in format 0x[64 hex characters]
+ */
 const generateTxHash = () => `0x${crypto.randomBytes(32).toString("hex")}`;
 
-// POST /api/transactions
+/**
+ * Create a new blockchain transaction
+ * POST /api/transactions
+ * 
+ * Transfers tokens from one wallet to another with balance validation
+ * Creates transaction record, updates token holdings, and generates email notifications
+ * 
+ * @param {string} fromAddress - Sender wallet address
+ * @param {string} toAddress - Receiver wallet address
+ * @param {string} tokenSymbol - Token symbol to transfer
+ * @param {number} amount - Amount to transfer
+ * @param {string} method - Transaction method (default: "transfer")
+ * 
+ * @returns {Object} Created transaction details
+ */
 const createTransaction = asyncHandler(async (req, res) => {
   const { fromAddress, toAddress, tokenSymbol, amount, method = "transfer" } = req.body;
 
+  // Validate required fields
   if (!fromAddress || !toAddress || !tokenSymbol || !amount || amount <= 0) {
-    return res.status(400).json({ message: "Missing required fields" });
+    return res.status(400).json({ 
+      success: false,
+      message: "Missing required fields: fromAddress, toAddress, tokenSymbol, and amount are required" 
+    });
   }
 
-  // Start transaction
+  // Start database transaction for atomicity
   const client = await pool.connect();
   try {
     await client.query("BEGIN");
 
-    // Get wallet IDs
+    // Validate and get wallet IDs
     const fromWallet = await client.query("SELECT wallet_id FROM wallets WHERE address = $1", [fromAddress]);
     const toWallet = await client.query("SELECT wallet_id FROM wallets WHERE address = $1", [toAddress]);
 
     if (!fromWallet.rows.length || !toWallet.rows.length) {
       await client.query("ROLLBACK");
-      return res.status(404).json({ message: "Wallet not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "One or both wallets not found" 
+      });
     }
 
     const fromWalletId = fromWallet.rows[0].wallet_id;
     const toWalletId = toWallet.rows[0].wallet_id;
 
-    // Get token ID
+    // Validate token exists
     const token = await client.query("SELECT token_id FROM tokens WHERE token_symbol = $1", [tokenSymbol]);
     if (!token.rows.length) {
       await client.query("ROLLBACK");
-      return res.status(404).json({ message: "Token not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: `Token with symbol '${tokenSymbol}' not found` 
+      });
     }
     const tokenId = token.rows[0].token_id;
 
-    // Check balance
+    // Validate sender has sufficient balance
     const balanceCheck = await client.query(
       `SELECT amount FROM token_holdings 
        WHERE wallet_id = $1 AND token_id = $2`,
@@ -47,20 +80,27 @@ const createTransaction = asyncHandler(async (req, res) => {
     );
 
     const currentBalance = balanceCheck.rows.length ? parseFloat(balanceCheck.rows[0].amount) : 0;
-    if (currentBalance < amount) {
+    const fee = amount * 0.001; // 0.1% transaction fee
+    const totalRequired = amount + fee;
+    
+    if (currentBalance < totalRequired) {
       await client.query("ROLLBACK");
-      return res.status(400).json({ message: "Insufficient balance" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Insufficient balance",
+        available: currentBalance,
+        required: totalRequired
+      });
     }
 
-    // Get latest block for transaction
+    // Get latest block for transaction association
     const latestBlock = await client.query(
       "SELECT block_id FROM blocks ORDER BY timestamp DESC LIMIT 1"
     );
     const blockId = latestBlock.rows.length ? latestBlock.rows[0].block_id : null;
 
-    // Create transaction
+    // Generate unique transaction hash
     const txHash = generateTxHash();
-    const fee = amount * 0.001; // 0.1% fee
 
     const txResult = await client.query(
       `INSERT INTO transactions (tx_hash, from_wallet_id, to_wallet_id, token_id, block_id, amount, fee, method, status, timestamp)
@@ -69,18 +109,13 @@ const createTransaction = asyncHandler(async (req, res) => {
       [txHash, fromWalletId, toWalletId, tokenId, blockId, amount, fee, method, "pending"]
     );
 
-    // Update balances
-    // Deduct from sender
-    if (balanceCheck.rows.length) {
-      await client.query(
-        `UPDATE token_holdings SET amount = amount - $1 
-         WHERE wallet_id = $2 AND token_id = $3`,
-        [amount, fromWalletId, tokenId]
-      );
-    } else {
-      await client.query("ROLLBACK");
-      return res.status(400).json({ message: "No balance found" });
-    }
+    // Update token balances
+    // Deduct amount + fee from sender
+    await client.query(
+      `UPDATE token_holdings SET amount = amount - $1 
+       WHERE wallet_id = $2 AND token_id = $3`,
+      [totalRequired, fromWalletId, tokenId]
+    );
 
     // Add to receiver
     const receiverBalance = await client.query(
@@ -109,9 +144,15 @@ const createTransaction = asyncHandler(async (req, res) => {
       [txResult.rows[0].transaction_id]
     );
 
-    // Create email verification record for transaction notification
-    const buyerUser = await client.query("SELECT user_id, email FROM users WHERE user_id = (SELECT user_id FROM wallets WHERE wallet_id = $1)", [toWalletId]);
-    const sellerUser = await client.query("SELECT user_id, email FROM users WHERE user_id = (SELECT user_id FROM wallets WHERE wallet_id = $1)", [fromWalletId]);
+    // Create email verification records for transaction notifications
+    const buyerUser = await client.query(
+      "SELECT user_id, email FROM users WHERE user_id = (SELECT user_id FROM wallets WHERE wallet_id = $1)", 
+      [toWalletId]
+    );
+    const sellerUser = await client.query(
+      "SELECT user_id, email FROM users WHERE user_id = (SELECT user_id FROM wallets WHERE wallet_id = $1)", 
+      [fromWalletId]
+    );
     
     if (buyerUser.rows.length) {
       const verificationToken = `0x${crypto.randomBytes(16).toString("hex")}`;
@@ -138,10 +179,12 @@ const createTransaction = asyncHandler(async (req, res) => {
     await client.query("COMMIT");
 
     res.status(201).json({
+      success: true,
       message: "Transaction created successfully",
       transaction: {
         ...txResult.rows[0],
         status: "confirmed",
+        fee: fee,
       },
     });
   } catch (error) {
@@ -152,7 +195,15 @@ const createTransaction = asyncHandler(async (req, res) => {
   }
 });
 
-// GET /api/transactions
+/**
+ * Get all transactions with pagination
+ * GET /api/transactions
+ * 
+ * @param {number} limit - Number of transactions to return (default: 50)
+ * @param {number} offset - Number of transactions to skip (default: 0)
+ * 
+ * @returns {Object} List of transactions with pagination info
+ */
 const getAllTransactions = asyncHandler(async (req, res) => {
   const limit = Number(req.query.limit) || 50;
   const offset = Number(req.query.offset) || 0;
@@ -187,17 +238,25 @@ const getAllTransactions = asyncHandler(async (req, res) => {
   const result = await pool.query(query, [limit, offset]);
 
   res.status(200).json({
-    message: "Transactions retrieved",
+    success: true,
+    message: "Transactions retrieved successfully",
     transactions: result.rows,
     pagination: {
       limit,
       offset,
-      total: result.rows.length,
+      count: result.rows.length,
     },
   });
 });
 
-// GET /api/transactions/:txHash
+/**
+ * Get transaction details by transaction hash
+ * GET /api/transactions/:txHash
+ * 
+ * @param {string} txHash - Transaction hash
+ * 
+ * @returns {Object} Transaction details including wallet and token information
+ */
 const getTransactionDetails = asyncHandler(async (req, res) => {
   const { txHash } = req.params;
 
@@ -230,11 +289,15 @@ const getTransactionDetails = asyncHandler(async (req, res) => {
   const result = await pool.query(query, [txHash]);
 
   if (!result.rows.length) {
-    return res.status(404).json({ message: "Transaction not found" });
+    return res.status(404).json({ 
+      success: false,
+      message: "Transaction not found" 
+    });
   }
 
   res.status(200).json({
-    message: "Transaction details retrieved",
+    success: true,
+    message: "Transaction details retrieved successfully",
     transaction: result.rows[0],
   });
 });

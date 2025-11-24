@@ -1,13 +1,24 @@
-// src/controllers/userController.js
+/**
+ * User Controller
+ * Handles user registration, authentication, profile management, and account operations
+ * @module userController
+ */
+
 const { pool } = require("../config/connectDB");
 const asyncHandler = require("../utils/asyncHandler");
 const crypto = require("crypto");
 const { sendVerificationEmail, sendResendVerificationEmail, sendDeleteAccountCode } = require("../utils/emailService");
 
-// Generate verification token
+/**
+ * Generate a random verification token
+ * @returns {string} Hexadecimal token string
+ */
 const generateToken = () => crypto.randomBytes(32).toString("hex");
 
-// Generate 6-digit verification code
+/**
+ * Generate a 6-digit verification code
+ * @returns {string} 6-digit numeric code
+ */
 const generateVerificationCode = () => {
   return Math.floor(100000 + Math.random() * 900000).toString();
 };

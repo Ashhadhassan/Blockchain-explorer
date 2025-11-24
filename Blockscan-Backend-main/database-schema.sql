@@ -155,3 +155,302 @@ CREATE INDEX IF NOT EXISTS idx_p2p_orders_type ON p2p_orders(order_type);
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_email_verifications_token ON email_verifications(token);
 
+-- ============================================================================
+-- FUNCTIONS
+-- ============================================================================
+
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to calculate wallet balance for a specific token
+CREATE OR REPLACE FUNCTION get_wallet_balance(p_wallet_id INTEGER, p_token_id INTEGER)
+RETURNS NUMERIC(30, 8) AS $$
+DECLARE
+    v_balance NUMERIC(30, 8);
+BEGIN
+    SELECT COALESCE(amount, 0) INTO v_balance
+    FROM token_holdings
+    WHERE wallet_id = p_wallet_id AND token_id = p_token_id;
+    
+    RETURN COALESCE(v_balance, 0);
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to validate if wallet has sufficient balance
+CREATE OR REPLACE FUNCTION validate_wallet_balance(
+    p_wallet_id INTEGER,
+    p_token_id INTEGER,
+    p_amount NUMERIC(30, 8)
+)
+RETURNS BOOLEAN AS $$
+DECLARE
+    v_balance NUMERIC(30, 8);
+BEGIN
+    v_balance := get_wallet_balance(p_wallet_id, p_token_id);
+    RETURN v_balance >= p_amount;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get user statistics
+CREATE OR REPLACE FUNCTION get_user_statistics(p_user_id INTEGER)
+RETURNS TABLE(
+    total_wallets INTEGER,
+    total_transactions INTEGER,
+    total_p2p_orders INTEGER,
+    total_balance_usd NUMERIC(30, 8)
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        COUNT(DISTINCT w.wallet_id)::INTEGER as total_wallets,
+        COUNT(DISTINCT t.transaction_id)::INTEGER as total_transactions,
+        COUNT(DISTINCT p.order_id)::INTEGER as total_p2p_orders,
+        COALESCE(SUM(th.amount * tok.price_usd), 0) as total_balance_usd
+    FROM users u
+    LEFT JOIN wallets w ON w.user_id = u.user_id
+    LEFT JOIN transactions t ON (t.from_wallet_id = w.wallet_id OR t.to_wallet_id = w.wallet_id)
+    LEFT JOIN p2p_orders p ON p.user_id = u.user_id
+    LEFT JOIN token_holdings th ON th.wallet_id = w.wallet_id
+    LEFT JOIN tokens tok ON tok.token_id = th.token_id
+    WHERE u.user_id = p_user_id
+    GROUP BY u.user_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to update token volume when transaction is confirmed
+CREATE OR REPLACE FUNCTION update_token_volume()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.status = 'confirmed' AND (OLD.status IS NULL OR OLD.status != 'confirmed') THEN
+        UPDATE tokens
+        SET volume_24h = volume_24h + NEW.amount
+        WHERE token_id = NEW.token_id;
+    END IF;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================================================
+-- TRIGGERS
+-- ============================================================================
+
+-- Trigger to auto-update updated_at for users table
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
+CREATE TRIGGER update_users_updated_at
+    BEFORE UPDATE ON users
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger to auto-update updated_at for p2p_orders table
+DROP TRIGGER IF EXISTS update_p2p_orders_updated_at ON p2p_orders;
+CREATE TRIGGER update_p2p_orders_updated_at
+    BEFORE UPDATE ON p2p_orders
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger to auto-update updated_at for p2p_transactions table
+DROP TRIGGER IF EXISTS update_p2p_transactions_updated_at ON p2p_transactions;
+CREATE TRIGGER update_p2p_transactions_updated_at
+    BEFORE UPDATE ON p2p_transactions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Trigger to update token volume when transaction is confirmed
+DROP TRIGGER IF EXISTS trigger_update_token_volume ON transactions;
+CREATE TRIGGER trigger_update_token_volume
+    AFTER INSERT OR UPDATE ON transactions
+    FOR EACH ROW
+    EXECUTE FUNCTION update_token_volume();
+
+-- Trigger to validate balance before transaction (warning only, doesn't block)
+CREATE OR REPLACE FUNCTION check_transaction_balance()
+RETURNS TRIGGER AS $$
+DECLARE
+    v_balance NUMERIC(30, 8);
+BEGIN
+    -- Only check if transaction is being inserted or updated to confirmed
+    IF NEW.from_wallet_id IS NOT NULL AND NEW.token_id IS NOT NULL THEN
+        v_balance := get_wallet_balance(NEW.from_wallet_id, NEW.token_id);
+        
+        -- Log warning if balance is insufficient (for monitoring)
+        IF v_balance < (NEW.amount + COALESCE(NEW.fee, 0)) THEN
+            RAISE WARNING 'Insufficient balance for transaction. Wallet: %, Token: %, Balance: %, Required: %',
+                NEW.from_wallet_id, NEW.token_id, v_balance, (NEW.amount + COALESCE(NEW.fee, 0));
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trigger_check_transaction_balance ON transactions;
+CREATE TRIGGER trigger_check_transaction_balance
+    BEFORE INSERT OR UPDATE ON transactions
+    FOR EACH ROW
+    EXECUTE FUNCTION check_transaction_balance();
+
+-- ============================================================================
+-- VIEWS
+-- ============================================================================
+
+-- View: Wallet Summary with balances
+CREATE OR REPLACE VIEW wallet_summary AS
+SELECT 
+    w.wallet_id,
+    w.address,
+    w.label,
+    w.user_id,
+    u.username,
+    u.email,
+    w.status as wallet_status,
+    COUNT(DISTINCT th.token_id) as token_count,
+    COALESCE(SUM(th.amount), 0) as total_tokens,
+    COALESCE(SUM(th.amount * t.price_usd), 0) as total_balance_usd,
+    w.created_at
+FROM wallets w
+LEFT JOIN users u ON u.user_id = w.user_id
+LEFT JOIN token_holdings th ON th.wallet_id = w.wallet_id
+LEFT JOIN tokens t ON t.token_id = th.token_id
+GROUP BY w.wallet_id, w.address, w.label, w.user_id, u.username, u.email, w.status, w.created_at;
+
+-- View: Transaction History with details
+CREATE OR REPLACE VIEW transaction_history AS
+SELECT 
+    t.transaction_id,
+    t.tx_hash,
+    t.amount,
+    t.fee,
+    t.method,
+    t.status,
+    t.timestamp,
+    t.email_notified,
+    -- From wallet info
+    wf.address as from_address,
+    wf.label as from_label,
+    uf.username as from_username,
+    -- To wallet info
+    wt.address as to_address,
+    wt.label as to_label,
+    ut.username as to_username,
+    -- Token info
+    tok.token_symbol,
+    tok.token_name,
+    tok.price_usd as token_price,
+    -- Block info
+    b.block_hash,
+    b.height as block_height,
+    b.timestamp as block_timestamp
+FROM transactions t
+LEFT JOIN wallets wf ON wf.wallet_id = t.from_wallet_id
+LEFT JOIN users uf ON uf.user_id = wf.user_id
+LEFT JOIN wallets wt ON wt.wallet_id = t.to_wallet_id
+LEFT JOIN users ut ON ut.user_id = wt.user_id
+LEFT JOIN tokens tok ON tok.token_id = t.token_id
+LEFT JOIN blocks b ON b.block_id = t.block_id
+ORDER BY t.timestamp DESC;
+
+-- View: User Statistics
+CREATE OR REPLACE VIEW user_statistics AS
+SELECT 
+    u.user_id,
+    u.username,
+    u.email,
+    u.status,
+    u.email_verified,
+    u.created_at,
+    COUNT(DISTINCT w.wallet_id) as total_wallets,
+    COUNT(DISTINCT CASE WHEN t.from_wallet_id = w.wallet_id OR t.to_wallet_id = w.wallet_id THEN t.transaction_id END) as total_transactions,
+    COUNT(DISTINCT p.order_id) as total_p2p_orders,
+    COUNT(DISTINCT CASE WHEN p.status = 'active' THEN p.order_id END) as active_p2p_orders,
+    COALESCE(SUM(th.amount * tok.price_usd), 0) as total_balance_usd,
+    COALESCE(SUM(CASE WHEN th.token_id IS NOT NULL THEN 1 ELSE 0 END), 0) as unique_tokens_held
+FROM users u
+LEFT JOIN wallets w ON w.user_id = u.user_id
+LEFT JOIN transactions t ON (t.from_wallet_id = w.wallet_id OR t.to_wallet_id = w.wallet_id)
+LEFT JOIN p2p_orders p ON p.user_id = u.user_id
+LEFT JOIN token_holdings th ON th.wallet_id = w.wallet_id
+LEFT JOIN tokens tok ON tok.token_id = th.token_id
+GROUP BY u.user_id, u.username, u.email, u.status, u.email_verified, u.created_at;
+
+-- View: Token Market Summary
+CREATE OR REPLACE VIEW token_market_summary AS
+SELECT 
+    tok.token_id,
+    tok.token_symbol,
+    tok.token_name,
+    tok.price_usd,
+    tok.change_24h,
+    tok.volume_24h,
+    tok.market_cap_usd,
+    tok.total_supply,
+    COUNT(DISTINCT th.wallet_id) as holder_count,
+    COUNT(DISTINCT t.transaction_id) as transaction_count,
+    COALESCE(SUM(th.amount), 0) as circulating_supply,
+    MAX(t.timestamp) as last_transaction_time
+FROM tokens tok
+LEFT JOIN token_holdings th ON th.token_id = tok.token_id
+LEFT JOIN transactions t ON t.token_id = tok.token_id
+GROUP BY tok.token_id, tok.token_symbol, tok.token_name, tok.price_usd, 
+         tok.change_24h, tok.volume_24h, tok.market_cap_usd, tok.total_supply;
+
+-- View: P2P Order Summary
+CREATE OR REPLACE VIEW p2p_order_summary AS
+SELECT 
+    p.order_id,
+    p.user_id,
+    u.username,
+    u.email,
+    tok.token_symbol,
+    tok.token_name,
+    p.order_type,
+    p.amount,
+    p.price,
+    p.total,
+    p.payment_method,
+    p.min_limit,
+    p.max_limit,
+    p.status,
+    p.created_at,
+    p.updated_at,
+    p.completed_at,
+    COUNT(DISTINCT pt.p2p_tx_id) as transaction_count
+FROM p2p_orders p
+LEFT JOIN users u ON u.user_id = p.user_id
+LEFT JOIN tokens tok ON tok.token_id = p.token_id
+LEFT JOIN p2p_transactions pt ON pt.order_id = p.order_id
+GROUP BY p.order_id, p.user_id, u.username, u.email, tok.token_symbol, tok.token_name,
+         p.order_type, p.amount, p.price, p.total, p.payment_method, p.min_limit,
+         p.max_limit, p.status, p.created_at, p.updated_at, p.completed_at;
+
+-- View: Block Summary with transaction count
+CREATE OR REPLACE VIEW block_summary AS
+SELECT 
+    b.block_id,
+    b.block_hash,
+    b.previous_hash,
+    b.height,
+    b.timestamp,
+    b.gas_used,
+    b.gas_limit,
+    b.size_kb,
+    b.reward,
+    b.status,
+    v.validator_name,
+    v.commission,
+    COUNT(DISTINCT t.transaction_id) as transaction_count,
+    COALESCE(SUM(t.amount), 0) as total_transaction_amount,
+    COALESCE(SUM(t.fee), 0) as total_fees
+FROM blocks b
+LEFT JOIN validators v ON v.validator_id = b.validator_id
+LEFT JOIN transactions t ON t.block_id = b.block_id
+GROUP BY b.block_id, b.block_hash, b.previous_hash, b.height, b.timestamp,
+         b.gas_used, b.gas_limit, b.size_kb, b.reward, b.status,
+         v.validator_name, v.commission
+ORDER BY b.height DESC;
+

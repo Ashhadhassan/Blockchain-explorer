@@ -1,8 +1,18 @@
-// src/controllers/marketController.js
+/**
+ * Market Controller
+ * Handles market operations including trading pairs, price history, and token purchases
+ * @module marketController
+ */
+
 const { pool } = require("../config/connectDB");
 const asyncHandler = require("../utils/asyncHandler");
 
-// GET /api/market/trading-pairs - Get all trading pairs
+/**
+ * Get all trading pairs
+ * GET /api/market/trading-pairs
+ * 
+ * @returns {Object} List of trading pairs with market data
+ */
 const getTradingPairs = asyncHandler(async (req, res) => {
   const query = `
     SELECT 
@@ -29,7 +39,14 @@ const getTradingPairs = asyncHandler(async (req, res) => {
   });
 });
 
-// GET /api/market/pair/:symbol - Get trading pair details
+/**
+ * Get trading pair details by symbol
+ * GET /api/market/pair/:symbol
+ * 
+ * @param {string} req.params.symbol - Token symbol
+ * 
+ * @returns {Object} Trading pair details
+ */
 const getPairDetails = asyncHandler(async (req, res) => {
   const { symbol } = req.params;
 
@@ -65,7 +82,16 @@ const getPairDetails = asyncHandler(async (req, res) => {
   });
 });
 
-// GET /api/market/price-history/:symbol - Get price history for chart
+/**
+ * Get price history for charting
+ * GET /api/market/price-history/:symbol
+ * 
+ * @param {string} req.params.symbol - Token symbol
+ * @param {string} req.query.interval - Time interval (default: "1h")
+ * @param {number} req.query.limit - Number of data points (default: 100)
+ * 
+ * @returns {Object} Price history data
+ */
 const getPriceHistory = asyncHandler(async (req, res) => {
   const { symbol } = req.params;
   const { interval = "1h", limit = 100 } = req.query;
@@ -107,7 +133,14 @@ const getPriceHistory = asyncHandler(async (req, res) => {
   });
 });
 
-// GET /api/market/orderbook/:symbol - Get order book
+/**
+ * Get order book for a trading pair
+ * GET /api/market/orderbook/:symbol
+ * 
+ * @param {string} req.params.symbol - Token symbol
+ * 
+ * @returns {Object} Order book with buy and sell orders
+ */
 const getOrderBook = asyncHandler(async (req, res) => {
   const { symbol } = req.params;
 
@@ -162,10 +195,209 @@ const getOrderBook = asyncHandler(async (req, res) => {
   });
 });
 
+/**
+ * Buy tokens using USDT
+ * POST /api/market/buy
+ * 
+ * @param {Object} req.body - Request body
+ * @param {number} req.body.userId - User ID
+ * @param {number} req.body.tokenId - Token ID to purchase
+ * @param {number} req.body.usdtAmount - Amount of USDT to spend
+ * 
+ * @returns {Object} Purchase result with details
+ */
+const buyWithUSDT = asyncHandler(async (req, res) => {
+  const { userId, tokenId, usdtAmount } = req.body;
+
+  if (!userId || !tokenId || !usdtAmount) {
+    return res.status(400).json({ 
+      success: false,
+      message: "Missing required fields: userId, tokenId, usdtAmount" 
+    });
+  }
+
+  if (parseFloat(usdtAmount) <= 0) {
+    return res.status(400).json({ 
+      success: false,
+      message: "USDT amount must be greater than 0" 
+    });
+  }
+
+  const client = await pool.connect();
+  try {
+    await client.query("BEGIN");
+
+    // Get USDT token
+    const usdtResult = await client.query(
+      `SELECT token_id, token_symbol, price_usd FROM tokens WHERE token_symbol = 'USDT' LIMIT 1`
+    );
+
+    if (!usdtResult.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ 
+        success: false,
+        message: "USDT token not found" 
+      });
+    }
+
+    const usdtTokenId = usdtResult.rows[0].token_id;
+
+    // Get target token
+    const targetTokenResult = await client.query(
+      `SELECT token_id, token_symbol, token_name, price_usd, decimals 
+       FROM tokens WHERE token_id = $1`,
+      [tokenId]
+    );
+
+    if (!targetTokenResult.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ 
+        success: false,
+        message: "Target token not found" 
+      });
+    }
+
+    const targetToken = targetTokenResult.rows[0];
+    const targetPrice = parseFloat(targetToken.price_usd);
+
+    if (targetPrice <= 0) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ 
+        success: false,
+        message: "Invalid token price" 
+      });
+    }
+
+    // Get user's wallet
+    const walletResult = await client.query(
+      `SELECT wallet_id, address FROM wallets WHERE user_id = $1 LIMIT 1`,
+      [userId]
+    );
+
+    if (!walletResult.rows.length) {
+      await client.query("ROLLBACK");
+      return res.status(404).json({ 
+        success: false,
+        message: "Wallet not found for user" 
+      });
+    }
+
+    const walletId = walletResult.rows[0].wallet_id;
+    const walletAddress = walletResult.rows[0].address;
+
+    // Check USDT balance
+    const usdtBalanceResult = await client.query(
+      `SELECT amount FROM token_holdings 
+       WHERE wallet_id = $1 AND token_id = $2`,
+      [walletId, usdtTokenId]
+    );
+
+    const usdtBalance = usdtBalanceResult.rows.length 
+      ? parseFloat(usdtBalanceResult.rows[0].amount) 
+      : 0;
+
+    const usdtAmountNum = parseFloat(usdtAmount);
+
+    if (usdtBalance < usdtAmountNum) {
+      await client.query("ROLLBACK");
+      return res.status(400).json({ 
+        success: false,
+        message: `Insufficient USDT balance. Available: ${usdtBalance} USDT` 
+      });
+    }
+
+    // Calculate tokens to receive (USDT amount / token price)
+    const tokensToReceive = usdtAmountNum / targetPrice;
+
+    // Apply 0.3% trading fee
+    const feePercent = 0.003;
+    const fee = tokensToReceive * feePercent;
+    const finalTokensAmount = tokensToReceive - fee;
+
+    // Deduct USDT from user's balance
+    const newUsdtBalance = usdtBalance - usdtAmountNum;
+    
+    if (newUsdtBalance <= 0) {
+      await client.query(
+        `DELETE FROM token_holdings WHERE wallet_id = $1 AND token_id = $2`,
+        [walletId, usdtTokenId]
+      );
+    } else {
+      await client.query(
+        `UPDATE token_holdings SET amount = $1 WHERE wallet_id = $2 AND token_id = $3`,
+        [newUsdtBalance.toFixed(8), walletId, usdtTokenId]
+      );
+    }
+
+    // Add target token to user's balance
+    const targetBalanceResult = await client.query(
+      `SELECT amount FROM token_holdings WHERE wallet_id = $1 AND token_id = $2`,
+      [walletId, tokenId]
+    );
+
+    if (targetBalanceResult.rows.length) {
+      const currentTargetBalance = parseFloat(targetBalanceResult.rows[0].amount);
+      const newTargetBalance = currentTargetBalance + finalTokensAmount;
+      await client.query(
+        `UPDATE token_holdings SET amount = $1 WHERE wallet_id = $2 AND token_id = $3`,
+        [newTargetBalance.toFixed(8), walletId, tokenId]
+      );
+    } else {
+      await client.query(
+        `INSERT INTO token_holdings (wallet_id, token_id, amount) 
+         VALUES ($1, $2, $3)`,
+        [walletId, tokenId, finalTokensAmount.toFixed(8)]
+      );
+    }
+
+    // Create blockchain transaction record
+    const txHash = `0x${require('crypto').randomBytes(32).toString('hex')}`;
+    
+    await client.query(
+      `INSERT INTO transactions (
+        tx_hash, from_wallet_id, to_wallet_id, token_id, amount, fee, 
+        status, method, timestamp
+      ) VALUES ($1, $2, $2, $3, $4, $5, 'confirmed', 'market_buy', NOW())`,
+      [
+        txHash,
+        walletId,
+        tokenId,
+        finalTokensAmount.toFixed(8),
+        fee.toFixed(8)
+      ]
+    );
+
+    await client.query("COMMIT");
+
+    res.status(200).json({
+      success: true,
+      message: "Purchase successful",
+      purchase: {
+        token: {
+          token_id: targetToken.token_id,
+          token_symbol: targetToken.token_symbol,
+          token_name: targetToken.token_name
+        },
+        usdtSpent: usdtAmountNum,
+        tokensReceived: finalTokensAmount,
+        price: targetPrice,
+        fee: fee,
+        feePercent: feePercent * 100
+      }
+    });
+  } catch (error) {
+    await client.query("ROLLBACK");
+    throw error;
+  } finally {
+    client.release();
+  }
+});
+
 module.exports = {
   getTradingPairs,
   getPairDetails,
   getPriceHistory,
   getOrderBook,
+  buyWithUSDT,
 };
 

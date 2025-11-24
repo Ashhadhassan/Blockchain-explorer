@@ -42,30 +42,32 @@ const createOrder = asyncHandler(async (req, res) => {
 });
 
 // GET /api/p2p/orders - Get all P2P orders
+// Uses p2p_order_summary view for comprehensive order data
 const getOrders = asyncHandler(async (req, res) => {
   const { orderType, tokenId, status, limit = 50, offset = 0 } = req.query;
 
+  // Use p2p_order_summary view
   let query = `
     SELECT 
-      o.order_id,
-      o.user_id,
-      u.username,
-      u.full_name,
-      tok.token_symbol,
-      tok.token_name,
-      o.order_type,
-      o.amount,
-      o.price,
-      o.total,
-      o.payment_method,
-      o.min_limit,
-      o.max_limit,
-      o.status,
-      o.created_at,
-      o.updated_at
-    FROM p2p_orders o
-    JOIN users u ON o.user_id = u.user_id
-    JOIN tokens tok ON o.token_id = tok.token_id
+      order_id,
+      user_id,
+      username,
+      email,
+      token_symbol,
+      token_name,
+      order_type,
+      amount,
+      price,
+      total,
+      payment_method,
+      min_limit,
+      max_limit,
+      status,
+      created_at,
+      updated_at,
+      completed_at,
+      transaction_count
+    FROM p2p_order_summary
     WHERE 1=1
   `;
 
@@ -73,21 +75,21 @@ const getOrders = asyncHandler(async (req, res) => {
   let paramCount = 1;
 
   if (orderType) {
-    query += ` AND o.order_type = $${paramCount++}`;
+    query += ` AND order_type = $${paramCount++}`;
     params.push(orderType);
   }
 
   if (tokenId) {
-    query += ` AND o.token_id = $${paramCount++}`;
+    query += ` AND token_id = $${paramCount++}`;
     params.push(tokenId);
   }
 
   if (status) {
-    query += ` AND o.status = $${paramCount++}`;
+    query += ` AND status = $${paramCount++}`;
     params.push(status);
   }
 
-  query += ` ORDER BY o.created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`;
+  query += ` ORDER BY created_at DESC LIMIT $${paramCount++} OFFSET $${paramCount++}`;
   params.push(Number(limit), Number(offset));
 
   const result = await pool.query(query, params);
@@ -104,32 +106,33 @@ const getOrders = asyncHandler(async (req, res) => {
 });
 
 // GET /api/p2p/orders/:id - Get order details
+// Uses p2p_order_summary view for comprehensive order data
 const getOrderDetails = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
+  // Use p2p_order_summary view
   const result = await pool.query(
     `SELECT 
-      o.order_id,
-      o.user_id,
-      u.username,
-      u.full_name,
-      u.email,
-      tok.token_symbol,
-      tok.token_name,
-      o.order_type,
-      o.amount,
-      o.price,
-      o.total,
-      o.payment_method,
-      o.min_limit,
-      o.max_limit,
-      o.status,
-      o.created_at,
-      o.updated_at
-     FROM p2p_orders o
-     JOIN users u ON o.user_id = u.user_id
-     JOIN tokens tok ON o.token_id = tok.token_id
-     WHERE o.order_id = $1`,
+      order_id,
+      user_id,
+      username,
+      email,
+      token_symbol,
+      token_name,
+      order_type,
+      amount,
+      price,
+      total,
+      payment_method,
+      min_limit,
+      max_limit,
+      status,
+      created_at,
+      updated_at,
+      completed_at,
+      transaction_count
+     FROM p2p_order_summary
+     WHERE order_id = $1`,
     [id]
   );
 

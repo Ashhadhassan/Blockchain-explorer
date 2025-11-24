@@ -24,10 +24,42 @@ const generateVerificationCode = () => {
 };
 
 // GET /api/users - Get all users (for P2P page)
+// Optionally include statistics using user_statistics view
 const getAllUsers = asyncHandler(async (req, res) => {
   const limit = Number(req.query.limit) || 100;
   const offset = Number(req.query.offset) || 0;
+  const includeStats = req.query.stats === 'true'; // Optional: ?stats=true
 
+  if (includeStats) {
+    // Use user_statistics view for comprehensive user data
+    const result = await pool.query(
+      `SELECT 
+        user_id, 
+        username, 
+        email, 
+        status, 
+        email_verified, 
+        created_at,
+        total_wallets,
+        total_transactions,
+        total_p2p_orders,
+        active_p2p_orders,
+        total_balance_usd,
+        unique_tokens_held
+       FROM user_statistics
+       WHERE status = 'active'
+       ORDER BY created_at DESC
+       LIMIT $1 OFFSET $2`,
+      [limit, offset]
+    );
+
+    return res.status(200).json({
+      message: "Users retrieved with statistics",
+      users: result.rows,
+    });
+  }
+
+  // Standard query without statistics
   const result = await pool.query(
     `SELECT user_id, username, email, full_name, phone, email_verified, status, created_at
      FROM users
@@ -151,8 +183,10 @@ const loginUser = asyncHandler(async (req, res) => {
 });
 
 // GET /api/users/:id
+// Returns user profile with optional statistics
 const getUserProfile = asyncHandler(async (req, res) => {
   const { id } = req.params;
+  const includeStats = req.query.stats === 'true'; // Optional: ?stats=true
 
   // Ensure id is numeric
   const numericId = parseInt(id);
@@ -160,6 +194,34 @@ const getUserProfile = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Invalid user ID format" });
   }
 
+  if (includeStats) {
+    // Use get_user_statistics function for comprehensive statistics
+    const statsResult = await pool.query(
+      `SELECT * FROM get_user_statistics($1)`,
+      [numericId]
+    );
+
+    // Get basic user info
+    const userResult = await pool.query(
+      `SELECT user_id, username, email, full_name, phone, email_verified, status, created_at
+       FROM users WHERE user_id = $1`,
+      [numericId]
+    );
+
+    if (!userResult.rows.length) {
+      return res.status(404).json({ message: "User not found" });
+    }
+
+    return res.status(200).json({
+      message: "User profile retrieved with statistics",
+      user: {
+        ...userResult.rows[0],
+        ...(statsResult.rows[0] || {}),
+      },
+    });
+  }
+
+  // Standard profile without statistics
   const result = await pool.query(
     `SELECT user_id, username, email, full_name, phone, email_verified, status, created_at
      FROM users WHERE user_id = $1`,

@@ -3,34 +3,29 @@ const { pool } = require("../config/connectDB");
 const asyncHandler = require("../utils/asyncHandler");
 
 // GET /api/blocks/latest
+// Uses block_summary view for comprehensive block data
 const getLatestBlocks = asyncHandler(async (req, res) => {
   const limit = Number(req.query.limit) || 10;
 
+  // Use block_summary view
   const query = `
     SELECT 
-      b.block_id,
-      b.block_hash,
-      b.previous_hash,
-      b.height,
-      b.validator_id,
-      v.validator_name,
-      b.gas_used,
-      b.gas_limit,
-      b.size_kb,
-      b.reward,
-      b.status,
-      b.timestamp,
-      COUNT(t.transaction_id) AS total_transactions,
-      COALESCE(
-        ARRAY_AGG(t.transaction_id ORDER BY t.transaction_id) FILTER (WHERE t.transaction_id IS NOT NULL),
-        ARRAY[]::INTEGER[]
-      ) AS transaction_ids
-    FROM blocks b
-    LEFT JOIN validators v ON b.validator_id = v.validator_id
-    LEFT JOIN transactions t ON t.block_id = b.block_id
-    GROUP BY b.block_id, b.block_hash, b.previous_hash, b.height, b.validator_id, v.validator_name, 
-             b.gas_used, b.gas_limit, b.size_kb, b.reward, b.status, b.timestamp
-    ORDER BY b.timestamp DESC
+      block_id,
+      block_hash,
+      previous_hash,
+      height,
+      timestamp,
+      gas_used,
+      gas_limit,
+      size_kb,
+      reward,
+      status,
+      validator_name,
+      commission,
+      transaction_count,
+      total_transaction_amount,
+      total_fees
+    FROM block_summary
     LIMIT $1;
   `;
 
@@ -43,34 +38,30 @@ const getLatestBlocks = asyncHandler(async (req, res) => {
 });
 
 // GET /api/blocks/:blockId
+// Uses block_summary view for comprehensive block data
 const getBlockDetails = asyncHandler(async (req, res) => {
   const { blockId } = req.params;
 
+  // Use block_summary view
   const query = `
     SELECT 
-      b.block_id,
-      b.block_hash,
-      b.previous_hash,
-      b.height,
-      b.validator_id,
-      v.validator_name,
-      b.gas_used,
-      b.gas_limit,
-      b.size_kb,
-      b.reward,
-      b.status,
-      b.timestamp,
-      COUNT(t.transaction_id) AS total_transactions,
-      COALESCE(
-        ARRAY_AGG(t.transaction_id ORDER BY t.transaction_id) FILTER (WHERE t.transaction_id IS NOT NULL),
-        ARRAY[]::INTEGER[]
-      ) AS transaction_ids
-    FROM blocks b
-    LEFT JOIN validators v ON b.validator_id = v.validator_id
-    LEFT JOIN transactions t ON t.block_id = b.block_id
-    WHERE b.block_id = $1
-    GROUP BY b.block_id, b.block_hash, b.previous_hash, b.height, b.validator_id, v.validator_name, 
-             b.gas_used, b.gas_limit, b.size_kb, b.reward, b.status, b.timestamp;
+      block_id,
+      block_hash,
+      previous_hash,
+      height,
+      timestamp,
+      gas_used,
+      gas_limit,
+      size_kb,
+      reward,
+      status,
+      validator_name,
+      commission,
+      transaction_count,
+      total_transaction_amount,
+      total_fees
+    FROM block_summary
+    WHERE block_id = $1;
   `;
 
   const result = await pool.query(query, [blockId]);

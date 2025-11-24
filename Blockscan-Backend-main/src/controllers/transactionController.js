@@ -72,23 +72,22 @@ const createTransaction = asyncHandler(async (req, res) => {
     }
     const tokenId = token.rows[0].token_id;
 
-    // Validate sender has sufficient balance
-    const balanceCheck = await client.query(
-      `SELECT amount FROM token_holdings 
-       WHERE wallet_id = $1 AND token_id = $2`,
-      [fromWalletId, tokenId]
-    );
-
-    const currentBalance = balanceCheck.rows.length ? parseFloat(balanceCheck.rows[0].amount) : 0;
+    // Validate sender has sufficient balance using database function
     const fee = amount * 0.001; // 0.1% transaction fee
     const totalRequired = amount + fee;
     
-    if (currentBalance < totalRequired) {
+    // Use validate_wallet_balance function
+    const balanceCheck = await client.query(
+      "SELECT validate_wallet_balance($1, $2, $3) as has_sufficient_balance, get_wallet_balance($1, $2) as current_balance",
+      [fromWalletId, tokenId, totalRequired]
+    );
+
+    if (!balanceCheck.rows[0].has_sufficient_balance) {
       await client.query("ROLLBACK");
       return res.status(400).json({ 
         success: false,
         message: "Insufficient balance",
-        available: currentBalance,
+        available: parseFloat(balanceCheck.rows[0].current_balance),
         required: totalRequired
       });
     }
@@ -199,6 +198,8 @@ const createTransaction = asyncHandler(async (req, res) => {
  * Get all transactions with pagination
  * GET /api/transactions
  * 
+ * Uses transaction_history view for comprehensive transaction data
+ * 
  * @param {number} limit - Number of transactions to return (default: 50)
  * @param {number} offset - Number of transactions to skip (default: 0)
  * 
@@ -208,30 +209,28 @@ const getAllTransactions = asyncHandler(async (req, res) => {
   const limit = Number(req.query.limit) || 50;
   const offset = Number(req.query.offset) || 0;
 
+  // Use transaction_history view for comprehensive data
   const query = `
     SELECT
-      t.transaction_id,
-      t.tx_hash,
-      fw.address AS from_address,
-      tw.address AS to_address,
-      fw.wallet_id AS from_wallet_id,
-      tw.wallet_id AS to_wallet_id,
-      tok.token_id,
-      tok.token_symbol,
-      tok.token_name,
-      t.amount,
-      t.fee,
-      t.method,
-      t.status,
-      t.timestamp,
-      b.block_hash,
-      b.block_id
-    FROM transactions t
-    LEFT JOIN wallets fw ON t.from_wallet_id = fw.wallet_id
-    LEFT JOIN wallets tw ON t.to_wallet_id = tw.wallet_id
-    LEFT JOIN tokens tok ON t.token_id = tok.token_id
-    LEFT JOIN blocks b ON t.block_id = b.block_id
-    ORDER BY t.timestamp DESC
+      transaction_id,
+      tx_hash,
+      from_address,
+      to_address,
+      from_username,
+      to_username,
+      token_symbol,
+      token_name,
+      token_price,
+      amount,
+      fee,
+      method,
+      status,
+      timestamp,
+      email_notified,
+      block_hash,
+      block_height,
+      block_timestamp
+    FROM transaction_history
     LIMIT $1 OFFSET $2;
   `;
 
@@ -253,6 +252,8 @@ const getAllTransactions = asyncHandler(async (req, res) => {
  * Get transaction details by transaction hash
  * GET /api/transactions/:txHash
  * 
+ * Uses transaction_history view for comprehensive transaction data
+ * 
  * @param {string} txHash - Transaction hash
  * 
  * @returns {Object} Transaction details including wallet and token information
@@ -260,30 +261,31 @@ const getAllTransactions = asyncHandler(async (req, res) => {
 const getTransactionDetails = asyncHandler(async (req, res) => {
   const { txHash } = req.params;
 
+  // Use transaction_history view
   const query = `
     SELECT
-      t.transaction_id,
-      t.tx_hash,
-      fw.address AS from_address,
-      fw.wallet_id AS from_wallet_id,
-      tw.address AS to_address,
-      tw.wallet_id AS to_wallet_id,
-      tok.token_symbol,
-      tok.token_name,
-      tok.token_id,
-      t.amount,
-      t.fee,
-      t.method,
-      t.status,
-      t.timestamp,
-      b.block_hash,
-      b.block_id
-    FROM transactions t
-    LEFT JOIN wallets fw ON t.from_wallet_id = fw.wallet_id
-    LEFT JOIN wallets tw ON t.to_wallet_id = tw.wallet_id
-    LEFT JOIN tokens tok ON t.token_id = tok.token_id
-    LEFT JOIN blocks b ON t.block_id = b.block_id
-    WHERE t.tx_hash = $1;
+      transaction_id,
+      tx_hash,
+      from_address,
+      from_label,
+      from_username,
+      to_address,
+      to_label,
+      to_username,
+      token_symbol,
+      token_name,
+      token_price,
+      amount,
+      fee,
+      method,
+      status,
+      timestamp,
+      email_notified,
+      block_hash,
+      block_height,
+      block_timestamp
+    FROM transaction_history
+    WHERE tx_hash = $1;
   `;
 
   const result = await pool.query(query, [txHash]);

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { LayoutDashboard, Users, Wallet2, Coins, ShieldCheck, Boxes, ArrowRightLeft, Send } from "lucide-react"
+import { LayoutDashboard, Users, Wallet2, Coins, ShieldCheck, Boxes, ArrowRightLeft, Send, RefreshCw } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { useAppStore } from "@/store/app-store"
@@ -17,9 +17,9 @@ const navigation = [
   { name: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { name: "Market", href: "/market", icon: Coins },
   { name: "P2P Trading", href: "/p2p", icon: Send },
+  { name: "Convert", href: "/convert", icon: RefreshCw },
   { name: "Wallet Management", href: "/wallet-management", icon: Wallet2 },
   { name: "Transaction History", href: "/transactions-history", icon: ArrowRightLeft },
-  { name: "Tokens", href: "/tokens", icon: Coins },
   { name: "Settings", href: "/settings", icon: Users },
 ]
 

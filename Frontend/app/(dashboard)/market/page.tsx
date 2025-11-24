@@ -8,10 +8,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button"
 import { marketApi, tokensApi } from "@/lib/api"
 import { formatCurrency, formatNumber } from "@/lib/utils"
-import { TrendingUp, TrendingDown, Search } from "lucide-react"
+import { TrendingUp, TrendingDown, Search, ShoppingCart } from "lucide-react"
 import Link from "next/link"
+import { useAppStore } from "@/store/app-store"
 
 export default function MarketPage() {
+  const { currentUser } = useAppStore()
   const [pairs, setPairs] = useState<any[]>([])
   const [tokens, setTokens] = useState<any[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -195,9 +197,22 @@ export default function MarketPage() {
                           <p>{formatNumber(pair.holders_count || 0)}</p>
                         </TableCell>
                         <TableCell>
-                          <Link href={`/market/${pair.token_symbol}`}>
-                            <Button variant="outline" size="sm">View</Button>
-                          </Link>
+                          <div className="flex gap-2">
+                            <Link href={`/market/${pair.token_symbol}`}>
+                              <Button variant="outline" size="sm">View</Button>
+                            </Link>
+                            {currentUser && pair.token_symbol !== "USDT" && (
+                              <Button 
+                                variant="default" 
+                                size="sm"
+                                disabled
+                                title="Coming soon"
+                              >
+                                <ShoppingCart className="h-4 w-4 mr-1" />
+                                Buy (Coming Soon)
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     )
@@ -208,6 +223,7 @@ export default function MarketPage() {
           </div>
         </CardContent>
       </Card>
+
     </div>
   )
 }

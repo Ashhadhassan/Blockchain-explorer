@@ -19,6 +19,7 @@ const userRoutes = require("./routes/userRoutes.js");
 const p2pRoutes = require("./routes/p2pRoutes.js");
 const emailRoutes = require("./routes/emailRoutes.js");
 const marketRoutes = require("./routes/marketRoutes.js");
+const conversionRoutes = require("./routes/conversionRoutes.js");
 
 const app = express();
 
@@ -46,6 +47,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/p2p", p2pRoutes);
 app.use("/api/email", emailRoutes);
 app.use("/api/market", marketRoutes);
+app.use("/api/conversion", conversionRoutes);
 
 // ============================================================================
 // Health Check & Default Routes
@@ -67,6 +69,7 @@ app.get("/", (req, res) => {
       search: "/api/search",
       email: "/api/email",
       market: "/api/market",
+      conversion: "/api/conversion",
     },
   });
 });

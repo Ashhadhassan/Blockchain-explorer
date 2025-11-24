@@ -357,6 +357,38 @@ export const marketApi = {
     const response = await api.get<{ buys: any[]; sells: any[] }>(`/api/market/orderbook/${symbol}`);
     return response;
   },
+  buyWithUSDT: async (data: {
+    userId: number;
+    tokenId: number;
+    usdtAmount: number;
+  }): Promise<any> => {
+    const response = await api.post<{ purchase: any }>("/api/market/buy", data);
+    return response.purchase;
+  },
+};
+
+// ============================================================================
+// Conversion API
+// ============================================================================
+export const conversionApi = {
+  swap: async (data: {
+    userId: number;
+    fromTokenId: number;
+    toTokenId: number;
+    amount: number;
+  }): Promise<any> => {
+    const response = await api.post<{ conversion: any }>("/api/conversion/swap", data);
+    return response.conversion;
+  },
+  getRate: async (fromTokenId: number, toTokenId: number, amount?: number): Promise<any> => {
+    const queryParams = new URLSearchParams();
+    queryParams.append("fromTokenId", fromTokenId.toString());
+    queryParams.append("toTokenId", toTokenId.toString());
+    if (amount) queryParams.append("amount", amount.toString());
+    
+    const response = await api.get<{ rate: any }>(`/api/conversion/rate?${queryParams.toString()}`);
+    return response.rate;
+  },
 };
 
 // ============================================================================

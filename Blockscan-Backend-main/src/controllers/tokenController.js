@@ -3,23 +3,27 @@ const { pool } = require("../config/connectDB");
 const asyncHandler = require("../utils/asyncHandler");
 
 // GET /api/tokens/:symbol
+// Uses token_market_summary view for comprehensive token data
 const getTokenDetails = asyncHandler(async (req, res) => {
   const { symbol } = req.params;
 
+  // Use token_market_summary view
   const query = `
     SELECT
-      tok.token_id,
-      tok.token_symbol,
-      tok.token_name,
-      tok.decimals,
-      tok.total_supply,
-      COUNT(DISTINCT th.wallet_id) AS total_holders,
-      COALESCE(SUM(th.amount), 0) AS circulating_supply,
-      tok.created_at
-    FROM tokens tok
-    LEFT JOIN token_holdings th ON th.token_id = tok.token_id
-    WHERE tok.token_symbol = $1
-    GROUP BY tok.token_id, tok.created_at;
+      token_id,
+      token_symbol,
+      token_name,
+      price_usd,
+      change_24h,
+      volume_24h,
+      market_cap_usd,
+      total_supply,
+      holder_count,
+      transaction_count,
+      circulating_supply,
+      last_transaction_time
+    FROM token_market_summary
+    WHERE token_symbol = $1;
   `;
 
   const result = await pool.query(query, [symbol]);
@@ -61,28 +65,28 @@ const getTokenHolders = asyncHandler(async (req, res) => {
 });
 
 // GET /api/tokens
+// Uses token_market_summary view for comprehensive market data
 const getAllTokens = asyncHandler(async (req, res) => {
   const limit = Number(req.query.limit) || 100;
   const offset = Number(req.query.offset) || 0;
 
+  // Use token_market_summary view
   const query = `
     SELECT
-      tok.token_id,
-      tok.token_symbol,
-      tok.token_name,
-      tok.decimals,
-      tok.total_supply,
-      tok.price_usd,
-      tok.change_24h,
-      tok.volume_24h,
-      tok.market_cap_usd,
-      COUNT(DISTINCT th.wallet_id) AS total_holders,
-      COALESCE(SUM(th.amount), 0) AS circulating_supply,
-      tok.created_at
-    FROM tokens tok
-    LEFT JOIN token_holdings th ON th.token_id = tok.token_id
-    GROUP BY tok.token_id
-    ORDER BY tok.market_cap_usd DESC NULLS LAST
+      token_id,
+      token_symbol,
+      token_name,
+      price_usd,
+      change_24h,
+      volume_24h,
+      market_cap_usd,
+      total_supply,
+      holder_count,
+      transaction_count,
+      circulating_supply,
+      last_transaction_time
+    FROM token_market_summary
+    ORDER BY market_cap_usd DESC NULLS LAST
     LIMIT $1 OFFSET $2;
   `;
 

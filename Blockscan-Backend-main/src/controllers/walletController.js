@@ -21,27 +21,30 @@ const getAllWallets = asyncHandler(async (req, res) => {
   const offset = Number(req.query.offset) || 0;
   const userId = req.query.userId;
 
+  // Use wallet_summary view for comprehensive wallet data
   let query = `
     SELECT 
-      w.wallet_id,
-      w.address,
-      w.label,
-      w.public_key,
-      u.username,
-      u.user_id,
-      w.status,
-      w.created_at
-    FROM wallets w
-    LEFT JOIN users u ON w.user_id = u.user_id
+      wallet_id,
+      address,
+      label,
+      user_id,
+      username,
+      email,
+      wallet_status as status,
+      token_count,
+      total_tokens,
+      total_balance_usd,
+      created_at
+    FROM wallet_summary
   `;
 
   const params = [];
   if (userId) {
-    query += ` WHERE w.user_id = $1`;
+    query += ` WHERE user_id = $1`;
     params.push(userId);
   }
 
-  query += ` ORDER BY w.created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+  query += ` ORDER BY created_at DESC LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
   params.push(limit, offset);
 
   const result = await pool.query(query, params);
@@ -87,7 +90,43 @@ const getWalletBalance = asyncHandler(async (req, res) => {
   const { address } = req.params;
   const { tokenSymbol } = req.query;
 
-  let query = `
+  // First get wallet_id from address
+  const wallet = await pool.query("SELECT wallet_id FROM wallets WHERE address = $1", [address]);
+  
+  if (!wallet.rows.length) {
+    return res.status(404).json({ message: "Wallet not found" });
+  }
+
+  const walletId = wallet.rows[0].wallet_id;
+
+  // If tokenSymbol provided, use function to get balance
+  if (tokenSymbol) {
+    const token = await pool.query("SELECT token_id, token_name, decimals FROM tokens WHERE token_symbol = $1", [tokenSymbol]);
+    if (!token.rows.length) {
+      return res.status(404).json({ message: "Token not found" });
+    }
+    
+    // Use get_wallet_balance function
+    const balanceResult = await pool.query(
+      "SELECT get_wallet_balance($1, $2) as amount",
+      [walletId, token.rows[0].token_id]
+    );
+    
+    return res.status(200).json({
+      message: "Wallet balance retrieved",
+      balances: [{
+        address,
+        token_id: token.rows[0].token_id,
+        token_symbol: tokenSymbol,
+        token_name: token.rows[0].token_name,
+        decimals: token.rows[0].decimals,
+        amount: parseFloat(balanceResult.rows[0].amount)
+      }],
+    });
+  }
+
+  // Otherwise, get all balances using standard query
+  const query = `
     SELECT 
       w.address,
       tok.token_id,
@@ -100,17 +139,10 @@ const getWalletBalance = asyncHandler(async (req, res) => {
     JOIN token_holdings th ON th.wallet_id = w.wallet_id
     JOIN tokens tok ON th.token_id = tok.token_id
     WHERE w.address = $1
+    ORDER BY tok.token_symbol
   `;
 
-  const params = [address];
-  if (tokenSymbol) {
-    query += ` AND tok.token_symbol = $2`;
-    params.push(tokenSymbol);
-  }
-
-  query += ` ORDER BY tok.token_symbol`;
-
-  const result = await pool.query(query, params);
+  const result = await pool.query(query, [address]);
 
   res.status(200).json({
     message: "Wallet balance retrieved",
@@ -122,7 +154,7 @@ const getWalletBalance = asyncHandler(async (req, res) => {
 const getWalletDetails = asyncHandler(async (req, res) => {
   const { address } = req.params;
 
-  // Get wallet basic info
+  // Get wallet basic info (need public_key from base table, not in view)
   const walletQuery = `
     SELECT 
       w.wallet_id,
@@ -169,11 +201,19 @@ const getWalletDetails = asyncHandler(async (req, res) => {
 
   const holdingsResult = await pool.query(holdingsQuery, [wallet.wallet_id]);
 
+  // Get summary from view for additional stats
+  const summaryResult = await pool.query(
+    `SELECT token_count, total_tokens, total_balance_usd 
+     FROM wallet_summary WHERE wallet_id = $1`,
+    [wallet.wallet_id]
+  );
+
   res.status(200).json({
     message: "Wallet details retrieved",
     wallet: {
       ...wallet,
       holdings: holdingsResult.rows,
+      summary: summaryResult.rows[0] || null,
     },
   });
 });

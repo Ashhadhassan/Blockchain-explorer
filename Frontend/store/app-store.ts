@@ -4,14 +4,10 @@ import { create } from "zustand"
 import { persist } from "zustand/middleware"
 import { toast } from "sonner"
 
-import { users as seedUsers, tokens as seedTokens } from "@/data"
 import { blocksApi, walletsApi, tokensApi, transactionsApi, usersApi } from "@/lib/api"
 import type {
   AppUser,
   Block,
-  CreateTokenInput,
-  CreateTransactionInput,
-  CreateUserInput,
   CreateWalletInput,
   Token,
   Transaction,
@@ -31,7 +27,6 @@ interface AppStoreState {
   currentUser: AppUser | null
   login: (email: string, password: string) => Promise<{ success: boolean; message?: string }>
   logout: () => void
-  addUser: (payload: CreateUserInput) => AppUser
 
   users: AppUser[]
   wallets: Wallet[]
@@ -62,11 +57,6 @@ interface AppStoreState {
     amount: number
     method?: string
   }) => Promise<Transaction | null>
-
-  // Local actions (for backward compatibility)
-  addToken: (payload: CreateTokenInput) => Token
-  addTransaction: (payload: CreateTransactionInput) => Transaction
-  addTransactions: (payloads: CreateTransactionInput[]) => Transaction[]
 
   // P2P Settings
   p2pEnabled: boolean
@@ -128,27 +118,10 @@ export const useAppStore = create<AppStoreState>()(
         }
       },
       logout: () => set({ currentUser: null }),
-      addUser: (payload) => {
-        const newUser: AppUser = {
-          id: generateId("user"),
-          name: payload.name,
-          email: payload.email,
-          password: payload.password,
-          role: payload.role ?? "user",
-          title: "Research Analyst",
-          organization: "BlockView Labs",
-          status: "active",
-          lastLogin: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          avatar: "/placeholder-user.jpg",
-        }
-        set((state) => ({ users: [newUser, ...state.users] }))
-        return newUser
-      },
 
-      users: seedUsers,
+      users: [],
       wallets: [],
-      tokens: seedTokens, // Keep tokens local for now
+      tokens: [],
       transactions: [],
       blocks: [],
       validators: [],
@@ -253,48 +226,6 @@ export const useAppStore = create<AppStoreState>()(
         }
       },
 
-      addToken: (payload) => {
-        const newToken: Token = {
-          id: generateId("token"),
-          symbol: payload.symbol.toUpperCase(),
-          name: payload.name,
-          type: payload.type,
-          priceUsd: payload.priceUsd,
-          change24h: 0,
-          supply: payload.supply,
-          marketCapUsd: payload.priceUsd * payload.supply,
-        }
-        set((state) => ({ tokens: [newToken, ...state.tokens] }))
-        return newToken
-      },
-
-      addTransaction: (payload) => {
-        const blockId = payload.blockId ?? get().blocks[get().blocks.length - 1]?.id ?? "pending"
-        const newTransaction: Transaction = {
-          id: generateId("tx"),
-          hash: generateHash(),
-          fromWalletId: payload.fromWalletId,
-          toWalletId: payload.toWalletId,
-          tokenId: payload.tokenId,
-          blockId,
-          amount: payload.amount,
-          fee: Math.random() * 0.01,
-          status: payload.status ?? "pending",
-          timestamp: new Date().toISOString(),
-          method: payload.method ?? "Generated",
-        }
-
-        set((state) => ({
-          transactions: [newTransaction, ...state.transactions],
-          blocks: state.blocks.map((block) =>
-            block.id === blockId ? { ...block, transactionIds: [newTransaction.id, ...block.transactionIds] } : block,
-          ),
-        }))
-
-        return newTransaction
-      },
-
-      addTransactions: (payloads) => payloads.map((payload) => get().addTransaction(payload)),
 
       // P2P Settings
       p2pEnabled: false,
